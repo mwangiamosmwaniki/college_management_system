@@ -139,19 +139,16 @@ export function FinancePortalView() {
       
       {/* Welcome Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-950/70 via-slate-900 to-indigo-950/70 border border-purple-800/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-              Bursary & Financial Directorate
+              Bursary & Finance
             </span>
             <span className="text-xs text-slate-400 font-mono">Segregated Duties Enforced</span>
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
-            Institutional Finance & Bursary Portal
+            Institutional Finance & Bursary
           </h1>
-          <p className="text-xs text-slate-300 max-w-xl">
-            Dual-custody accounts, student fee reconciliation, automated clearance dispatches, and departmental payroll allocations.
-          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -285,8 +282,7 @@ export function FinancePortalView() {
         <PortalDataLifecycleManager
           portalId="FINANCE"
           allowedEntityTypes={['INVOICE']}
-          title="Bursary Ledger & Invoice Lifecycle Operations"
-          subtitle="Governed billing creation, payment status transitions, cancellation / void workflows, and optimistic invoice concurrency."
+          title="Bursary Ledger & Invoice Operations"
         />
       )}
 

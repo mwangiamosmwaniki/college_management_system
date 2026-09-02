@@ -1,20 +1,29 @@
 // Core Domain Types for College ERP Multi-Portal Architecture
 
 export type PortalId = 
+  | 'PUBLIC'
+  | 'APPLICANT'
   | 'STUDENT'
   | 'LECTURER'
-  | 'ELEARNING'
-  | 'ELIBRARY'
-  | 'FINANCE'
+  | 'HOD'
+  | 'REGISTRAR'
   | 'EXAMINATIONS'
-  | 'ADMISSIONS'
+  | 'FINANCE'
+  | 'ELIBRARY'
+  | 'ATTACHMENT'
   | 'HR'
-  | 'HOSTEL'
   | 'PROCUREMENT'
-  | 'SUPPORT'
+  | 'PRINCIPAL'
+  | 'ADMIN'
+  | 'ADMISSIONS'
+  | 'ELEARNING'
+  | 'HOSTEL'
+  | 'TRANSPORT'
+  | 'CLINIC'
   | 'ALUMNI'
-  | 'RESEARCH'
-  | 'ADMIN';
+  | 'PARENT'
+  | 'SUPPORT'
+  | 'RESEARCH';
 
 export type PortalStatus = 'ONLINE' | 'DEGRADED' | 'MAINTENANCE' | 'OFFLINE';
 
@@ -1202,6 +1211,7 @@ export interface InstitutionalDocPayload {
   recipientProgram?: string;
   recipientLevel?: string;
   session?: string;
+  academicSession?: string;
   issuingAuthority?: string;
   contentBody?: string;
   bodyParagraphs?: string[];
@@ -1218,6 +1228,443 @@ export interface InstitutionalDocPayload {
   };
   data?: Record<string, any>;
   customNotes?: string;
+}
+
+// -------------------------------------------------------------
+// KENYAN TVET & COLLEGE DOMAIN EXTENSIONS
+// -------------------------------------------------------------
+
+export type KenyanQualificationLevel =
+  | 'ARTISAN'
+  | 'CRAFT_CERTIFICATE'
+  | 'CERTIFICATE'
+  | 'DIPLOMA'
+  | 'HIGHER_DIPLOMA'
+  | 'SHORT_COURSE';
+
+export type KenyanExaminingBody =
+  | 'KNEC'
+  | 'TVET_CDACC'
+  | 'NITA'
+  | 'KASNEB'
+  | 'COLLEGE_BOARD'
+  | 'INTERNAL';
+
+export type KenyanAcademicTermOrSemester =
+  | 'TERM_1'
+  | 'TERM_2'
+  | 'TERM_3'
+  | 'SEMESTER_1'
+  | 'SEMESTER_2'
+  | 'TRIMESTER_1'
+  | 'TRIMESTER_2'
+  | 'TRIMESTER_3';
+
+export type StudentFundingCategory =
+  | 'SELF_SPONSORED'
+  | 'KUCCPS_GOVERNMENT'
+  | 'HELB_LOAN'
+  | 'COUNTY_BURSARY'
+  | 'NG_CDF_BURSARY'
+  | 'CORPORATE_SCHOLARSHIP'
+  | 'INSTITUTIONAL_WORKSTUDY';
+
+// Public Landing Website Models
+export interface PublicProgrammeItem {
+  id: string;
+  code: string;
+  name: string;
+  departmentId: string;
+  departmentName: string;
+  facultyName: string;
+  qualificationLevel: KenyanQualificationLevel;
+  examiningBody: KenyanExaminingBody;
+  durationMonths: number;
+  durationTerms: number;
+  studyMode: 'FULL_TIME' | 'PART_TIME' | 'WEEKEND' | 'EVENING' | 'DISTANCE_ODEL';
+  campus: string;
+  intakes: ('JANUARY' | 'MAY' | 'SEPTEMBER')[];
+  minimumRequirements: string;
+  kcseRequirement: string;
+  tuitionFeePerTerm: number;
+  totalEstimatedFee: number;
+  careerOutcomes: string[];
+  accreditation: string;
+  featured?: boolean;
+}
+
+export interface PublicNewsItem {
+  id: string;
+  title: string;
+  category: 'ANNOUNCEMENT' | 'INTAKE_ALERT' | 'EXAMINATION_NOTICE' | 'EVENT' | 'TENDER' | 'GRADUATION';
+  summary: string;
+  content: string;
+  publishedDate: string;
+  author: string;
+  imageUrl?: string;
+  featured?: boolean;
+  downloadUrl?: string;
+}
+
+export interface PublicDownloadItem {
+  id: string;
+  title: string;
+  category: 'PROSPECTUS' | 'FEE_STRUCTURE' | 'APPLICATION_FORM' | 'ACADEMIC_CALENDAR' | 'STUDENT_HANDBOOK' | 'ATTACHMENT_GUIDELINES';
+  fileFormat: 'PDF' | 'DOCX';
+  fileSize: string;
+  url: string;
+  updatedDate: string;
+  targetAudience: 'PUBLIC' | 'APPLICANTS' | 'STUDENTS' | 'TRAINERS';
+}
+
+// Online Application & Applicant Portal Models
+export interface KcseSubjectGrade {
+  subject: string;
+  grade: 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D+' | 'D' | 'D-' | 'E';
+  points: number;
+}
+
+export interface ApplicantMasterRecord {
+  id: string;
+  applicationNumber: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  nationalIdOrBirthCert?: string;
+  nationalIdNumber?: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  dateOfBirth?: string;
+  county?: string;
+  subCounty?: string;
+  postalAddress?: string;
+  appliedDate?: string;
+  
+  // Academic Background
+  previousSchool?: string;
+  kcseIndexNumber?: string;
+  kcseYear?: number;
+  kcseMeanGrade?: string;
+  kcseSubjectGrades?: KcseSubjectGrade[];
+  
+  // Programme Selection
+  primaryProgrammeId?: string;
+  primaryProgrammeName?: string;
+  programmeId?: string;
+  programmeCode?: string;
+  programmeName?: string;
+  qualificationLevel?: KenyanQualificationLevel;
+  examiningBody?: KenyanExaminingBody;
+  intakePeriod?: string;
+  campus?: string;
+  alternativeProgrammeId?: string;
+  alternativeProgrammeName?: string;
+  preferredIntake?: 'JANUARY' | 'MAY' | 'SEPTEMBER';
+  preferredCampus?: string;
+  studyMode?: 'FULL_TIME' | 'PART_TIME' | 'WEEKEND' | 'EVENING' | 'DISTANCE_ODEL';
+  fundingSource?: StudentFundingCategory;
+  kuccpsAdmissionNumber?: string;
+  
+  // Guardian / Emergency Contact
+  guardianName?: string;
+  guardianPhone?: string;
+  guardianRelationship?: string;
+  guardianEmail?: string;
+  
+  // Uploaded Verification Documents
+  documents?: {
+    id: string;
+    category: 'KCSE_CERTIFICATE' | 'BIRTH_CERTIFICATE' | 'NATIONAL_ID' | 'PASSPORT_PHOTO' | 'LEAVING_CERTIFICATE';
+    fileName: string;
+    fileSize: string;
+    uploadedAt: string;
+    status: 'PENDING_VERIFICATION' | 'VERIFIED' | 'FLAGGED_INVALID';
+  }[];
+
+  // Application Fee
+  applicationFeeAmount?: number;
+  applicationFeeStatus?: 'PENDING' | 'VERIFIED' | 'WAIVED';
+  applicationFeePaid?: boolean;
+  mpesaReference?: string;
+  mpesaReceiptNumber?: string;
+  paymentDate?: string;
+  kcseResultSlipUrl?: string;
+  nationalIdUrl?: string;
+  passportPhotoUrl?: string;
+
+  // Review & Decision Lifecycle
+  status: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'DOCS_CORRECTION_REQUESTED' | 'OFFERED' | 'OFFER_ACCEPTED' | 'ADMISSION_PROVISIONED' | 'ADMITTED' | 'REJECTED';
+  admissionOfferDate?: string;
+  offerDeadlineDate?: string;
+  allocatedAdmissionNumber?: string;
+  reviewerRemarks?: string;
+  reviewedBy?: string;
+  joiningInstructionsUrl?: string;
+  admissionLetterUrl?: string;
+}
+
+// Single Source of Truth Student Master Record
+export interface StudentMasterRecord {
+  id: string;
+  admissionNumber: string;
+  fullName: string;
+  photoUrl?: string;
+  nationalIdOrBirthCert?: string;
+  nationalIdNumber?: string;
+  kcseIndexNumber?: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  dateOfBirth?: string;
+  phone: string;
+  email: string;
+  county?: string;
+  subCounty?: string;
+  postalAddress?: string;
+
+  // Academic Affiliation
+  programmeId: string;
+  programmeCode?: string;
+  programmeName: string;
+  qualificationLevel: KenyanQualificationLevel;
+  examiningBody: KenyanExaminingBody;
+  departmentId: string;
+  departmentName: string;
+  campusId?: string;
+  campusName?: string;
+  studyMode?: 'FULL_TIME' | 'PART_TIME' | 'WEEKEND' | 'DISTANCE_ODEL';
+  intakeCohort?: string;
+  intakePeriod?: string;
+  cohortYear?: string;
+  admissionDate?: string;
+  dateAdmitted?: string;
+
+  // Status & Lifecycle Tracking
+  academicStatus: 'ADMITTED' | 'ACTIVE' | 'DEFERRED' | 'ACADEMIC_LEAVE' | 'ON_ATTACHMENT' | 'ATTACHMENT' | 'SUSPENDED' | 'COMPLETED' | 'GRADUATED' | 'DISCONTINUED';
+  currentAcademicYear?: string;
+  currentTermOrSemester?: KenyanAcademicTermOrSemester;
+  currentTerm?: number;
+  totalTerms?: number;
+  totalTermsCompleted?: number;
+  totalTermsRequired?: number;
+  feeBalance?: number;
+  industrialAttachmentCompleted?: boolean;
+
+  // Guardian Details
+  guardianName?: string;
+  guardianPhone?: string;
+  guardianEmail?: string;
+
+  // Sponsorship & Funding
+  fundingCategory?: StudentFundingCategory;
+  sponsorName?: string;
+  helbAccountNumber?: string;
+
+  // Audit Status History
+  statusHistory?: {
+    status: string;
+    effectiveDate: string;
+    reason: string;
+    authorizedBy: string;
+  }[];
+}
+
+// Transactional Student Ledger & M-Pesa Integration
+export interface StudentTransactionLedgerEntry {
+  id: string;
+  studentId: string;
+  admissionNumber: string;
+  timestamp: string;
+  entryType: 'OPENING_BALANCE' | 'INVOICE_CHARGE' | 'PAYMENT_MPESA' | 'PAYMENT_BANK' | 'HELB_DISBURSEMENT' | 'COUNTY_BURSARY' | 'CDF_BURSARY' | 'DISCOUNT' | 'CREDIT_NOTE' | 'REVERSAL_ADJUSTMENT';
+  referenceNumber: string;
+  description: string;
+  termOrSemester: KenyanAcademicTermOrSemester;
+  academicYear: string;
+  debitAmount: number;
+  creditAmount: number;
+  runningBalance: number;
+  etimsInvoiceNumber?: string;
+  reconciledBy?: string;
+  isReversed?: boolean;
+  reversalReason?: string;
+}
+
+export interface MpesaPaymentTransaction {
+  id: string;
+  mpesaReceiptNumber: string;
+  transactionAmount: number;
+  payerPhoneNumber: string;
+  billRefNumber: string;
+  transactionTimestamp: string;
+  channel: 'PAYBILL_247247' | 'TILL_NUMBER' | 'STK_PUSH_EXPRESS';
+  status: 'QUEUED_VERIFICATION' | 'RECONCILED_MATCHED' | 'UNMATCHED_ACCOUNT' | 'DUPLICATE_FLAGGED' | 'REVERSED';
+  matchedStudentId?: string;
+  matchedAdmissionNumber?: string;
+  matchedStudentName?: string;
+  allocatedLedgerEntryId?: string;
+  processedBy?: string;
+  notes?: string;
+}
+
+// HOD & Academic Department Models
+export interface DepartmentCurriculum {
+  id: string;
+  departmentId: string;
+  departmentName: string;
+  programmeId: string;
+  programmeCode?: string;
+  programmeName: string;
+  qualificationLevel: KenyanQualificationLevel;
+  curriculumVersion: string;
+  examiningBody: KenyanExaminingBody;
+  totalTerms: number;
+  totalCreditsOrUnits?: number;
+  units: {
+    id?: string;
+    unitCode?: string;
+    unitTitle?: string;
+    code?: string;
+    title?: string;
+    theoryHours?: number;
+    practicalHours?: number;
+    termNumber: number;
+    isCore?: boolean;
+    isPractical?: boolean;
+    hoursPerWeek?: number;
+    weeklyHours?: number;
+    examiningBody?: string;
+    prerequisites?: string[];
+  }[];
+  activeStudentsEnrolled?: number;
+}
+
+export interface LecturerUnitAllocation {
+  id: string;
+  academicYear: string;
+  termOrSemester?: KenyanAcademicTermOrSemester;
+  term?: string;
+  unitCode: string;
+  unitTitle?: string;
+  unitName?: string;
+  departmentId: string;
+  lecturerId: string;
+  lecturerName: string;
+  weeklyContactHours?: number;
+  weeklyHours?: number;
+  assignedClassCohorts?: string[];
+  roomVenue?: string;
+  hodApproved?: boolean;
+  assignedByHodId?: string;
+  assignedAt?: string;
+  status?: 'ALLOCATED' | 'ACCEPTED' | 'OVERLOAD_FLAGGED';
+}
+
+// Industrial Attachment & Career Services Models
+export interface AttachmentPlacement {
+  id: string;
+  studentId?: string;
+  admissionNumber: string;
+  studentName: string;
+  programmeName: string;
+  departmentName?: string;
+  companyName: string;
+  companyLocation?: string;
+  companyTown?: string;
+  industrySupervisorName: string;
+  industrySupervisorPhone?: string;
+  industrySupervisorEmail?: string;
+  facultyAssessorName?: string;
+  
+  startDate: string;
+  endDate: string;
+  durationWeeks?: number;
+  totalWeeks?: number;
+  verifiedWeeks?: number;
+  assessorScore?: number;
+  
+  collegeVisitingSupervisorId?: string;
+  collegeVisitingSupervisorName?: string;
+  assessmentVisitDate?: string;
+  supervisorScore?: number;
+  logbookWeeksVerified?: number;
+  totalRequiredWeeks?: number;
+  
+  status: 'PLACEMENT_PENDING' | 'APPROVED' | 'IN_PROGRESS' | 'ASSESSED' | 'COMPLETED' | 'LOGBOOK_PENDING' | 'PLACED';
+  logbookEntriesCount?: number;
+  clearanceGranted?: boolean;
+}
+
+// Multi-Department Clearance Models
+export interface DepartmentalClearanceSignoff {
+  department: 'LIBRARY' | 'DEPARTMENT_WORKSHOP' | 'HOSTEL' | 'FINANCE' | 'REGISTRAR';
+  officerName: string;
+  officerRole: string;
+  status: 'PENDING' | 'CLEARED' | 'OUTSTANDING_OBLIGATION' | 'EXEMPTED';
+  obligationDetails?: string;
+  feeOrItemDue?: number;
+  signedAt?: string;
+  remarks?: string;
+}
+
+export interface StudentClearanceRecord {
+  id: string;
+  studentId: string;
+  admissionNumber: string;
+  studentName: string;
+  programmeName: string;
+  departmentName: string;
+  clearanceReason: 'GRADUATION' | 'COMPLETION' | 'TRANSFER' | 'WITHDRAWAL' | 'DEFERRAL';
+  initiatedDate: string;
+  targetCompletionDate: string;
+  overallStatus: 'IN_PROGRESS' | 'COMPLETED_CLEARED' | 'BLOCKED';
+  signoffs: DepartmentalClearanceSignoff[];
+  finalCertificateIssued: boolean;
+  finalClearedBy?: string;
+  clearedDate?: string;
+}
+
+// Procurement & Stores Models
+export interface ProcurementRequisition {
+  id: string;
+  requisitionNumber: string;
+  departmentId: string;
+  departmentName: string;
+  requestedBy?: string;
+  requestedDate?: string;
+  requisitionerId?: string;
+  requisitionerName?: string;
+  title?: string;
+  createdAt?: string;
+  hodApprovalStatus?: string;
+  items: {
+    id?: string;
+    itemName: string;
+    category?: 'WORKSHOP_TOOLS' | 'LAB_CHEMICALS' | 'STATIONERY' | 'ICT_HARDWARE' | 'MAINTENANCE_PARTS';
+    specification?: string;
+    quantity?: number;
+    quantityRequested?: number;
+    unitOfMeasure?: string;
+    estimatedUnitCost?: number;
+    estimatedUnitPrice?: number;
+    totalPrice?: number;
+    purpose?: string;
+  }[];
+  totalEstimatedCost: number;
+  status: 'DRAFT' | 'SUBMITTED' | 'HOD_RECOMMENDED' | 'PRINCIPAL_APPROVED' | 'PO_ISSUED' | 'APPROVED_PROCUREMENT' | 'GOODS_RECEIVED' | 'DELIVERED' | 'REJECTED' | 'APPROVED';
+  poNumber?: string;
+  grnNumber?: string;
+  approverRemarks?: string;
+}
+
+export interface StoreInventoryItem {
+  id: string;
+  itemCode: string;
+  itemName: string;
+  category: 'WORKSHOP_TOOLS' | 'LAB_SUPPLIES' | 'STATIONERY' | 'EQUIPMENT' | 'CLEANING' | 'ICT_HARDWARE' | 'LAB_CHEMICALS' | 'MAINTENANCE_PARTS' | 'ELECTRICAL' | 'CONSUMABLES' | string;
+  unitOfMeasure: string;
+  quantityInStock: number;
+  reorderLevel: number;
+  unitCost: number;
+  storeLocation: string;
+  lastRestockedDate?: string;
+  status?: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
 }
 
 

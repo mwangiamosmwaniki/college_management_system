@@ -22,6 +22,13 @@ import { HrPortalView } from '@/components/portals/hr/HrPortalView';
 import { AdmissionsPortalView } from '@/components/portals/admissions/AdmissionsPortalView';
 import { HostelPortalView } from '@/components/portals/hostel/HostelPortalView';
 import { LecturerPortalView } from '@/components/portals/lecturer/LecturerPortalView';
+import PublicLandingPageView from '@/components/portals/public/PublicLandingPageView';
+import ApplicantPortalView from '@/components/portals/applicant/ApplicantPortalView';
+import HODPortalView from '@/components/portals/hod/HODPortalView';
+import RegistrarPortalView from '@/components/portals/registrar/RegistrarPortalView';
+import AttachmentPortalView from '@/components/portals/attachment/AttachmentPortalView';
+import ProcurementPortalView from '@/components/portals/procurement/ProcurementPortalView';
+import PrincipalExecutiveDashboardView from '@/components/portals/principal/PrincipalExecutiveDashboardView';
 
 function ERPAppContent() {
   const {
@@ -41,6 +48,20 @@ function ERPAppContent() {
     }
 
     switch (activePortalId) {
+      case 'PUBLIC':
+        return <PublicLandingPageView />;
+      case 'APPLICANT':
+        return <ApplicantPortalView />;
+      case 'HOD':
+        return <HODPortalView />;
+      case 'REGISTRAR':
+        return <RegistrarPortalView />;
+      case 'ATTACHMENT':
+        return <AttachmentPortalView />;
+      case 'PROCUREMENT':
+        return <ProcurementPortalView />;
+      case 'PRINCIPAL':
+        return <PrincipalExecutiveDashboardView />;
       case 'STUDENT':
         return <StudentPortalView />;
       case 'ELEARNING':

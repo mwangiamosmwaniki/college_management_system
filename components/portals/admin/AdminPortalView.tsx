@@ -189,19 +189,16 @@ export function AdminPortalView() {
       
       {/* Super Admin Console Header */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-blue-950/60 to-purple-950/60 border border-blue-800/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-              Institutional Governance & RBAC Center
+              Governance & RBAC
             </span>
-            <span className="text-xs text-slate-400 font-mono">Super Administrator Console</span>
+            <span className="text-xs text-slate-400 font-mono">Console</span>
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
-            Central Administrative & Security Command
+            Security & Administration
           </h1>
-          <p className="text-xs text-slate-300 max-w-xl">
-            Global micro-portal governance, multi-domain RBAC assignment, automated security testing, and live event monitoring.
-          </p>
         </div>
 
         {/* Action quick links */}
@@ -211,7 +208,7 @@ export function AdminPortalView() {
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm"
           >
             <ShieldAlert className="w-4 h-4" />
-            <span>Live Security Suite (A–O)</span>
+            <span>Security Suite (A–O)</span>
           </button>
 
           <button
@@ -219,7 +216,7 @@ export function AdminPortalView() {
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-sm"
           >
             <Sliders className="w-4 h-4" />
-            <span>Custom Role Builder</span>
+            <span>Role Builder</span>
           </button>
         </div>
       </div>
@@ -238,26 +235,26 @@ export function AdminPortalView() {
         <div className="space-y-6 animate-in fade-in duration-150">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono">
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-              <span className="text-slate-400 text-[10px] uppercase font-bold">Active Micro-Portals</span>
-              <div className="text-white text-xl font-bold">{portals.length} Isolated Domains</div>
+              <span className="text-slate-400 text-[10px] uppercase font-bold">Micro-Portals</span>
+              <div className="text-white text-xl font-bold">{portals.length} Isolated</div>
               <span className="text-emerald-400 text-[10px]">100% Operational</span>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
               <span className="text-slate-400 text-[10px] uppercase font-bold">Registered Users</span>
-              <div className="text-blue-400 text-xl font-bold">{users.length} Identities</div>
+              <div className="text-blue-400 text-xl font-bold">{users.length} Users</div>
               <span className="text-slate-400 text-[10px]">Multi-Tenant RBAC</span>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
               <span className="text-slate-400 text-[10px] uppercase font-bold">Event Bus Telemetry</span>
-              <div className="text-purple-400 text-xl font-bold">{events.length} Events Logged</div>
-              <span className="text-emerald-400 text-[10px]">Cross-Portal Sync OK</span>
+              <div className="text-purple-400 text-xl font-bold">{events.length} Events</div>
+              <span className="text-emerald-400 text-[10px]">Sync OK</span>
             </div>
 
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-              <span className="text-slate-400 text-[10px] uppercase font-bold">Security Compliance</span>
-              <div className="text-emerald-400 text-xl font-bold">100% (15/15 Tests)</div>
+              <span className="text-slate-400 text-[10px] uppercase font-bold">Compliance Tests</span>
+              <div className="text-emerald-400 text-xl font-bold">15/15 Passed</div>
               <span className="text-emerald-400 text-[10px]">A-O Invariants Passing</span>
             </div>
           </div>
@@ -270,13 +267,13 @@ export function AdminPortalView() {
             >
               <div className="flex items-center justify-between">
                 <span className="font-bold text-white text-sm group-hover:text-emerald-400 transition">
-                  Run Security Suite (A–O)
+                  Security Suite (A–O)
                 </span>
                 <ShieldAlert className="w-5 h-5 text-emerald-400" />
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Execute automated regression test suite covering cross-portal privilege escalation, token tampering, and clearance isolation.
-              </p>
+              <div className="text-xs text-slate-400 font-mono">
+                Automated regression & isolation verification
+              </div>
             </button>
 
             <button
@@ -285,13 +282,13 @@ export function AdminPortalView() {
             >
               <div className="flex items-center justify-between">
                 <span className="font-bold text-white text-sm group-hover:text-purple-400 transition">
-                  Custom Role Builder
+                  Role Builder
                 </span>
                 <Sliders className="w-5 h-5 text-purple-400" />
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Create novel role definitions with granular capability sets and assign them dynamically to user accounts.
-              </p>
+              <div className="text-xs text-slate-400 font-mono">
+                Granular capability definitions & assignments
+              </div>
             </button>
 
             <button
@@ -304,9 +301,9 @@ export function AdminPortalView() {
                 </span>
                 <Radio className="w-5 h-5 text-blue-400" />
               </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Inspect real-time pub/sub broadcast messages across Student, Exams, Bursary, Library, Admissions, and HR domains.
-              </p>
+              <div className="text-xs text-slate-400 font-mono">
+                Real-time pub/sub telemetry streams
+              </div>
             </button>
           </div>
         </div>
@@ -331,8 +328,7 @@ export function AdminPortalView() {
             'RESEARCH_PROJECT',
             'ACADEMIC_YEAR'
           ]}
-          title="Institutional Master Data & Record Lifecycle Governance"
-          subtitle="Platform-wide institutional data matrix, optimistic concurrency controls, bulk batch processing, schema validation, and audit recovery."
+          title="Master Data & Record Governance"
         />
       )}
 
@@ -342,14 +338,11 @@ export function AdminPortalView() {
       {activeNavTab === 'portals' && (
         <div className="space-y-6 animate-in fade-in duration-150">
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-4">
-            <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Server className="w-5 h-5 text-blue-400" />
-                University Micro-Portal Architecture & Status Registry
+            <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Server className="w-4 h-4 text-blue-400" />
+                Portal Registry & Status
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Independent functional domains running under isolated security contexts and RBAC boundaries.
-              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -383,23 +376,18 @@ export function AdminPortalView() {
       {activeNavTab === 'rbac_matrix' && (
         <div className="space-y-6 animate-in fade-in duration-150">
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Sliders className="w-5 h-5 text-purple-400" />
-                  Role Definitions & Permission Capabilities Matrix
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Granular role definitions, capability badges, and domain authority bindings.
-                </p>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-3">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-purple-400" />
+                Role Definitions & Permissions
+              </h2>
 
               <button
                 onClick={() => setIsRoleBuilderOpen(true)}
                 className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-sm flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                <span>Create Custom Role</span>
+                <span>Create Role</span>
               </button>
             </div>
 
@@ -874,16 +862,11 @@ export function AdminPortalView() {
       {activeNavTab === 'audit' && (
         <div className="space-y-6 animate-in fade-in duration-150">
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-400" />
-                  Institutional Security & Cross-Portal Audit Log
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Tamper-evident chronological audit records of all user actions, logins, role changes, and approvals.
-                </p>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-3">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-400" />
+                Security & Audit Log
+              </h2>
 
               <div className="flex items-center gap-3">
                 <div className="relative">

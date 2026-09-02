@@ -364,7 +364,7 @@ export function LecturerPortalView() {
           
           {/* Header Banner */}
           <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/70 to-slate-900 border border-indigo-800/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   Faculty Academic Portal
@@ -376,9 +376,6 @@ export function LecturerPortalView() {
               <h1 className="text-2xl font-black text-white tracking-tight">
                 Welcome back, {currentUser.name}
               </h1>
-              <p className="text-xs text-slate-300 max-w-2xl">
-                Manage your course syllabi, launch live QR attendance sessions, evaluate assignment submissions, moderate semester gradebooks, and mentor academic advisees.
-              </p>
             </div>
 
             {/* Quick Action Hub */}
@@ -391,14 +388,14 @@ export function LecturerPortalView() {
                 className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-950/50 transition"
               >
                 <QrCode className="w-4 h-4" />
-                <span>Launch QR Attendance</span>
+                <span>QR Attendance</span>
               </button>
               <button
                 onClick={() => setActiveNavTab('gradebook')}
                 className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-950/50 transition"
               >
                 <FileSpreadsheet className="w-4 h-4" />
-                <span>Open Gradebook</span>
+                <span>Gradebook</span>
               </button>
             </div>
           </div>
@@ -604,8 +601,7 @@ export function LecturerPortalView() {
         <PortalDataLifecycleManager
           portalId="LECTURER"
           allowedEntityTypes={['COURSE', 'ASSIGNMENT', 'QUESTION_BANK', 'RESEARCH_PROJECT']}
-          title="Lecturer Course Content & Asset Lifecycle Studio"
-          subtitle="Manage drafts, syllabus approvals, CBT question banks, and research project metadata with optimistic concurrency and version control."
+          title="Course Content & Lifecycle Studio"
         />
       )}
 
@@ -750,15 +746,10 @@ export function LecturerPortalView() {
           
           {/* Header Action */}
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <QrCode className="w-5 h-5 text-blue-400" />
-                Lecture Attendance & Geofenced QR Check-In Studio
-              </h2>
-              <p className="text-xs text-slate-400">
-                Generate real-time animated QR codes for in-class student verification and manage manual presence overrides.
-              </p>
-            </div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-blue-400" />
+              Lecture Attendance & QR Check-In
+            </h2>
 
             <button
               onClick={() => setIsNewSessionModalOpen(true)}
@@ -898,15 +889,10 @@ export function LecturerPortalView() {
           
           {/* Assignment Header */}
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <FileCheck2 className="w-5 h-5 text-indigo-400" />
-                Continuous Assessment & Rubric Speed Grader
-              </h2>
-              <p className="text-xs text-slate-400">
-                Grade student programming submissions, verify plagiarism similarity indices, and score against criteria rubrics.
-              </p>
-            </div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <FileCheck2 className="w-5 h-5 text-indigo-400" />
+              Continuous Assessment & Speed Grader
+            </h2>
           </div>
 
           {/* Submissions & Speed Grader View */}
@@ -1029,15 +1015,10 @@ export function LecturerPortalView() {
           
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <HelpCircle className="w-5 h-5 text-amber-400" />
-                  Departmental Question Bank & Online Assessment Engine
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Taxonomy-indexed question bank (MCQ, Multiple Select, Algorithmic Code Trace).
-                </p>
-              </div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-amber-400" />
+                Question Bank & Assessment Engine
+              </h2>
             </div>
 
             <div className="space-y-3">
@@ -1094,11 +1075,8 @@ export function LecturerPortalView() {
                 </span>
               </div>
               <h2 className="text-lg font-bold text-white">
-                Semester Marks Entry & Senate Moderation Sheet
+                Semester Marks Entry & Moderation Sheet
               </h2>
-              <p className="text-xs text-slate-400">
-                Direct marks entry with live weighted total computation, letter grade mapping, and formal grade change petitions.
-              </p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -1253,15 +1231,10 @@ export function LecturerPortalView() {
         <div className="space-y-6 animate-in fade-in duration-150">
           
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-emerald-400" />
-                Academic Advising & Early Warning Intervention Hub
-              </h2>
-              <p className="text-xs text-slate-400">
-                Track advisee CGPAs, log consultation sessions, and dispatch referrals to Academic Support or Counselling.
-              </p>
-            </div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-emerald-400" />
+              Academic Advising & Interventions
+            </h2>
 
             <button
               onClick={() => setIsReferralModalOpen(true)}
@@ -1323,11 +1296,8 @@ export function LecturerPortalView() {
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <GraduationCap className="w-5 h-5 text-indigo-400" />
-              Final Year Capstone & Postgraduate Thesis Supervision
+              Capstone & Thesis Supervision
             </h2>
-            <p className="text-xs text-slate-400">
-              Track candidate milestones, review submitted dissertation chapters, and record defense readiness.
-            </p>
 
             <div className="grid grid-cols-1 gap-4 pt-2">
               {supervisionProjects.map(proj => (
@@ -1369,7 +1339,7 @@ export function LecturerPortalView() {
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Award className="w-5 h-5 text-amber-400" />
-              Faculty Research & Scopus Publications Portfolio
+              Research & Publications Portfolio
             </h2>
 
             <div className="space-y-3">
@@ -1399,7 +1369,7 @@ export function LecturerPortalView() {
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Sliders className="w-5 h-5 text-blue-400" />
-              Academic Workload Metrics & Resource Requisitions
+              Academic Workload & Requisitions
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
@@ -1448,9 +1418,6 @@ export function LecturerPortalView() {
               <ShieldCheck className="w-5 h-5 text-amber-400" />
               Lecturer Portal Telemetry & Audit Stream
             </h2>
-            <p className="text-xs text-slate-400">
-              Live audit events generated from lecturer grade releases, attendance check-ins, and syllabus updates.
-            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">

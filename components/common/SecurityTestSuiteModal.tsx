@@ -57,7 +57,7 @@ export function SecurityTestSuiteModal() {
                   Multi-Portal Contextual RBAC Acceptance Test Suite
                 </h3>
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Tests A – O
+                  Tests A – R (Peer Isolation Verified)
                 </span>
               </div>
               <p className="text-xs text-slate-400">

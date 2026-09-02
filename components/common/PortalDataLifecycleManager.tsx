@@ -12,7 +12,8 @@ import {
 } from '@/types/erp';
 import {
   IMPORT_EXPORT_SCHEMAS,
-  evaluateCrudPermission
+  evaluateCrudPermission,
+  isRecordOwner
 } from '@/lib/crud-lifecycle-engine';
 import {
   Database,
@@ -39,7 +40,9 @@ import {
   FileText,
   Send,
   Check,
-  CheckSquare
+  CheckSquare,
+  UserCheck,
+  UserX
 } from 'lucide-react';
 
 interface PortalDataLifecycleManagerProps {
@@ -72,6 +75,7 @@ export function PortalDataLifecycleManager({
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [stateFilter, setStateFilter] = useState<string>('ALL');
+  const [ownershipFilter, setOwnershipFilter] = useState<'ALL' | 'MINE' | 'PEERS'>('ALL');
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
 
   // Bulk selection
@@ -109,7 +113,9 @@ export function PortalDataLifecycleManager({
     setTimeout(() => setNotification(null), 4500);
   };
 
-  // Filter entities according to portal's scope and selected type
+  const isSuperAdmin = currentUser.portalAssignments.some(a => a.portalId === 'ADMIN' && (a.isAdmin || a.roleId === 'ROLE_SUPER_ADMIN'));
+
+  // Filter entities according to portal's scope, selected type, and ownership isolation
   const filteredEntities = crudEntities.filter(e => {
     const matchesType = e.entityType === selectedEntityType;
     const matchesSearch =
@@ -118,12 +124,17 @@ export function PortalDataLifecycleManager({
       e.ownerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       e.departmentId.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesState = stateFilter === 'ALL' ? true : e.lifecycleState === stateFilter;
-    return matchesType && matchesSearch && matchesState;
+    
+    const isOwner = isRecordOwner(currentUser, e);
+    const matchesOwnership =
+      ownershipFilter === 'ALL' ? true :
+      ownershipFilter === 'MINE' ? isOwner :
+      !isOwner;
+
+    return matchesType && matchesSearch && matchesState && matchesOwnership;
   });
 
   const selectedEntity = crudEntities.find(e => e.id === selectedEntityId);
-
-  const isSuperAdmin = currentUser.portalAssignments.some(a => a.portalId === 'ADMIN' && (a.isAdmin || a.roleId === 'ROLE_SUPER_ADMIN'));
 
   // Check user permission for CREATE on this entity
   const createPerm = evaluateCrudPermission(currentUser, portalId, selectedEntityType, 'create');
@@ -197,6 +208,11 @@ export function PortalDataLifecycleManager({
   };
 
   const handleOpenEdit = (entity: CrudRecordMeta) => {
+    const isOwner = isRecordOwner(currentUser, entity);
+    if (!isOwner && !isSuperAdmin) {
+      showNotification('error', `Ownership Isolation: You cannot edit '${entity.title}' owned by '${entity.ownerName}'. Same-role peer data is read-only.`);
+      return;
+    }
     setSelectedEntityId(entity.id);
     setFormTitle(entity.title);
     setFormCode(entity.codeOrIdentifier);
@@ -232,6 +248,12 @@ export function PortalDataLifecycleManager({
   };
 
   const handleLifecycleTransition = (entity: CrudRecordMeta, operation: CrudOperation) => {
+    const isOwner = isRecordOwner(currentUser, entity);
+    if (!isOwner && !isSuperAdmin) {
+      showNotification('error', `Ownership Isolation: Cannot perform '${operation.toUpperCase()}' on '${entity.title}' owned by '${entity.ownerName}'. Peer data is protected.`);
+      return;
+    }
+
     const reason = prompt(`Enter justification for '${operation.toUpperCase()}' on ${entity.title}:`, `Authorized status transition in ${portalId} portal.`);
     if (reason === null) return;
 
@@ -458,8 +480,8 @@ export function PortalDataLifecycleManager({
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-900/80 rounded-xl border border-slate-800">
-        <div className="relative">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 bg-slate-900/80 rounded-xl border border-slate-800">
+        <div className="relative sm:col-span-2">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
@@ -471,11 +493,11 @@ export function PortalDataLifecycleManager({
         </div>
 
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
+          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
           <select
             value={stateFilter}
             onChange={e => setStateFilter(e.target.value)}
-            className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
+            className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
           >
             <option value="ALL">All Lifecycle States</option>
             <option value="ACTIVE">ACTIVE / LIVE</option>
@@ -489,8 +511,17 @@ export function PortalDataLifecycleManager({
           </select>
         </div>
 
-        <div className="flex items-center justify-end text-xs text-slate-400">
-          <span>Found <strong className="text-white">{filteredEntities.length}</strong> records</span>
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0" />
+          <select
+            value={ownershipFilter}
+            onChange={e => setOwnershipFilter(e.target.value as any)}
+            className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-blue-500 font-medium"
+          >
+            <option value="ALL">All Records</option>
+            <option value="MINE">👤 My Records Only</option>
+            <option value="PEERS">🔒 Peer Records (Isolated)</option>
+          </select>
         </div>
       </div>
 
@@ -569,6 +600,8 @@ export function PortalDataLifecycleManager({
             ) : (
               filteredEntities.map(entity => {
                 const isSelected = selectedIds.includes(entity.id);
+                const isOwner = isRecordOwner(currentUser, entity);
+                const canMutate = isOwner || isSuperAdmin;
                 return (
                   <tr
                     key={entity.id}
@@ -592,8 +625,17 @@ export function PortalDataLifecycleManager({
                     </td>
 
                     <td className="p-3">
-                      <div className="font-semibold text-slate-100 flex items-center gap-1.5">
+                      <div className="font-semibold text-slate-100 flex items-center gap-1.5 flex-wrap">
                         <span>{entity.title}</span>
+                        {isOwner ? (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium flex items-center gap-1" title="You are the verified owner of this record">
+                            <UserCheck className="w-2.5 h-2.5" /> My Record
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 border border-amber-500/30 font-medium flex items-center gap-1" title={`Isolated Peer Record (Owned by ${entity.ownerName}). Same-role isolation policy prevents unauthorized peer tampering.`}>
+                            <Lock className="w-2.5 h-2.5" /> Peer: {entity.ownerName}
+                          </span>
+                        )}
                         {entity.isProtected && (
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20" title="Protected Historical Record">
                             Protected
@@ -624,7 +666,9 @@ export function PortalDataLifecycleManager({
                     </td>
 
                     <td className="p-3 text-[11px]">
-                      <div className="text-slate-200">{entity.ownerName}</div>
+                      <div className="text-slate-200 font-medium flex items-center gap-1">
+                        {entity.ownerName}
+                      </div>
                       <div className="text-[10px] text-slate-500">{new Date(entity.updatedAt).toLocaleDateString()}</div>
                     </td>
 
@@ -634,8 +678,13 @@ export function PortalDataLifecycleManager({
                         {/* Edit Button */}
                         <button
                           onClick={() => handleOpenEdit(entity)}
-                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                          title="Edit Attributes"
+                          disabled={!canMutate}
+                          className={`p-1 rounded border transition ${
+                            canMutate
+                              ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                              : 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                          }`}
+                          title={canMutate ? 'Edit Attributes' : `Peer isolation active: Only ${entity.ownerName} or Administrator can edit`}
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
@@ -644,8 +693,13 @@ export function PortalDataLifecycleManager({
                         {entity.lifecycleState === 'DRAFT' && (
                           <button
                             onClick={() => handleLifecycleTransition(entity, 'submit')}
-                            className="p-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30"
-                            title="Submit for Approval"
+                            disabled={!canMutate}
+                            className={`p-1 rounded border transition ${
+                              canMutate
+                                ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/30'
+                                : 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                            }`}
+                            title={canMutate ? 'Submit for Approval' : 'Peer record: submit restricted'}
                           >
                             <Send className="w-3.5 h-3.5" />
                           </button>
@@ -654,8 +708,13 @@ export function PortalDataLifecycleManager({
                         {(entity.lifecycleState === 'SUBMITTED' || entity.lifecycleState === 'PENDING') && (
                           <button
                             onClick={() => handleLifecycleTransition(entity, 'approve')}
-                            className="p-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30"
-                            title="Approve Record"
+                            disabled={!canMutate}
+                            className={`p-1 rounded border transition ${
+                              canMutate
+                                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30'
+                                : 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                            }`}
+                            title={canMutate ? 'Approve Record' : 'Peer record: approve restricted'}
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
@@ -664,8 +723,13 @@ export function PortalDataLifecycleManager({
                         {entity.lifecycleState === 'APPROVED' && (
                           <button
                             onClick={() => handleLifecycleTransition(entity, 'publish')}
-                            className="p-1 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30"
-                            title="Publish Officially"
+                            disabled={!canMutate}
+                            className={`p-1 rounded border transition ${
+                              canMutate
+                                ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30'
+                                : 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                            }`}
+                            title={canMutate ? 'Publish Officially' : 'Peer record: publish restricted'}
                           >
                             <Play className="w-3.5 h-3.5" />
                           </button>
@@ -674,8 +738,13 @@ export function PortalDataLifecycleManager({
                         {entity.lifecycleState === 'PUBLISHED' && (
                           <button
                             onClick={() => handleLifecycleTransition(entity, 'lock')}
-                            className="p-1 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30"
-                            title="Lock against modifications"
+                            disabled={!canMutate}
+                            className={`p-1 rounded border transition ${
+                              canMutate
+                                ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border-purple-500/30'
+                                : 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                            }`}
+                            title={canMutate ? 'Lock against modifications' : 'Peer record: lock restricted'}
                           >
                             <Lock className="w-3.5 h-3.5" />
                           </button>
@@ -684,8 +753,13 @@ export function PortalDataLifecycleManager({
                         {entity.lifecycleState === 'LOCKED' && (
                           <button
                             onClick={() => handleLifecycleTransition(entity, 'unlock')}
-                            className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600"
-                            title="Unlock"
+                            disabled={!canMutate}
+                            className={`p-1 rounded border transition ${
+                              canMutate
+                                ? 'bg-slate-700 hover:bg-slate-600 text-slate-300 border-slate-600'
+                                : 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                            }`}
+                            title={canMutate ? 'Unlock' : 'Peer record: unlock restricted'}
                           >
                             <Unlock className="w-3.5 h-3.5" />
                           </button>
@@ -694,16 +768,26 @@ export function PortalDataLifecycleManager({
                         {(entity.lifecycleState === 'ARCHIVED' || entity.lifecycleState === 'SOFT_DELETED') ? (
                           <button
                             onClick={() => handleLifecycleTransition(entity, 'restore')}
-                            className="p-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30"
-                            title="Restore from Archive/Trash"
+                            disabled={!canMutate}
+                            className={`p-1 rounded border transition ${
+                              canMutate
+                                ? 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border-emerald-500/30'
+                                : 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                            }`}
+                            title={canMutate ? 'Restore from Archive/Trash' : 'Peer record: restore restricted'}
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
                           </button>
                         ) : (
                           <button
                             onClick={() => handleLifecycleTransition(entity, 'archive')}
-                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700"
-                            title="Archive Record"
+                            disabled={!canMutate}
+                            className={`p-1 rounded border transition ${
+                              canMutate
+                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700'
+                                : 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                            }`}
+                            title={canMutate ? 'Archive Record' : 'Peer record: archive restricted'}
                           >
                             <Archive className="w-3.5 h-3.5" />
                           </button>
@@ -713,7 +797,7 @@ export function PortalDataLifecycleManager({
                         <button
                           onClick={() => handleOpenClone(entity)}
                           className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                          title="Clone Record"
+                          title="Clone Record (Permitted for templates)"
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </button>
@@ -722,8 +806,13 @@ export function PortalDataLifecycleManager({
                         {entity.lifecycleState !== 'SOFT_DELETED' && (
                           <button
                             onClick={() => handleLifecycleTransition(entity, 'soft_delete')}
-                            className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20"
-                            title="Soft Delete"
+                            disabled={!canMutate}
+                            className={`p-1 rounded border transition ${
+                              canMutate
+                                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/20'
+                                : 'bg-slate-900/60 text-slate-600 border-slate-800 cursor-not-allowed opacity-50'
+                            }`}
+                            title={canMutate ? 'Soft Delete' : 'Peer record: delete restricted'}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

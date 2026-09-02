@@ -88,19 +88,16 @@ export function HostelPortalView() {
       
       {/* Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-orange-950/70 via-slate-900 to-amber-950/70 border border-orange-800/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
-              Student Housing & Residence Directorate
+              Student Housing
             </span>
             <span className="text-xs text-slate-400 font-mono">Academic Year 2026/2027</span>
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
             Campus Accommodation & Hostel Services
           </h1>
-          <p className="text-xs text-slate-300 max-w-xl">
-            Bed space allocations, room inventories, residential maintenance work orders, and end-of-session hall clearance.
-          </p>
         </div>
 
         <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-right">
@@ -215,7 +212,6 @@ export function HostelPortalView() {
           portalId="HOSTEL"
           allowedEntityTypes={['STUDENT']}
           title="Hostel Resident & Bed-Space Record Governance"
-          subtitle="Governed resident allocations, room inventory states, damage reporting records, and hall clearance validations."
         />
       )}
 

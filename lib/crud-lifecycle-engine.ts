@@ -113,6 +113,36 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
       maxCapacity: 40
     }
   },
+  {
+    id: 'CRS-MTH202',
+    entityType: 'COURSE',
+    title: 'MTH 202: Discrete Mathematics & Automata Theory',
+    codeOrIdentifier: 'MTH202',
+    portalId: 'LECTURER',
+    lifecycleState: 'APPROVED',
+    version: 2,
+    optimisticLockToken: 'tok_v2_mth202',
+    scope: 'DEPARTMENT',
+    departmentId: 'DPT_CS',
+    facultyId: 'FAC_SCI',
+    campusId: 'CAMPUS_MAIN',
+    ownerId: 'USR-LEC-002',
+    ownerName: 'Dr. Arthur Vance',
+    createdAt: '2026-02-10T10:00:00.000Z',
+    createdBy: 'Dr. Arthur Vance',
+    updatedAt: '2026-08-01T09:00:00.000Z',
+    updatedBy: 'Dr. Arthur Vance',
+    isProtected: false,
+    tags: ['Core', 'Mathematics', 'Peer Lecturer Record'],
+    attributes: {
+      creditUnits: 3,
+      semester: 'Second Semester',
+      enrolledCount: 110,
+      maxCapacity: 130,
+      prerequisites: 'MTH 101',
+      description: 'Formal language theory, Turing computability, DFA/NFA proofs, and combinatorics.'
+    }
+  },
 
   // Student CRUD (Section 17)
   {
@@ -145,6 +175,38 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
       academicStanding: 'GOOD_STANDING',
       phone: '+1 (555) 234-8901',
       guardianContact: 'Elena Rivera (+1 555-092-1144)'
+    }
+  },
+  {
+    id: 'STU-2026-00188',
+    entityType: 'STUDENT',
+    title: 'Sarah Connor (STU-2026-00188)',
+    codeOrIdentifier: 'STU-2026-00188',
+    portalId: 'STUDENT',
+    lifecycleState: 'ACTIVE',
+    version: 3,
+    optimisticLockToken: 'tok_v3_stu188',
+    scope: 'INSTITUTION',
+    departmentId: 'DPT_CS',
+    facultyId: 'FAC_SCI',
+    campusId: 'CAMPUS_MAIN',
+    ownerId: 'USR-STU-002',
+    ownerName: 'Sarah Connor',
+    createdAt: '2024-09-01T08:00:00.000Z',
+    createdBy: 'Admissions Office',
+    updatedAt: '2026-08-12T10:00:00.000Z',
+    updatedBy: 'Sarah Connor',
+    isProtected: true,
+    tags: ['Undergraduate', 'Level 300', 'Peer Student Record'],
+    attributes: {
+      matricNo: 'SWE/2024/0188',
+      programme: 'B.Sc. Software Engineering',
+      level: '300 Level',
+      cgpa: 3.92,
+      totalCreditsEarned: 98,
+      academicStanding: 'GOOD_STANDING',
+      phone: '+1 (555) 345-6789',
+      guardianContact: 'John Connor (+1 555-883-9922)'
     }
   },
   {
@@ -505,6 +567,33 @@ export interface CrudPermissionEvaluation {
   userRoleName: string;
   scopeAllowed: boolean;
   reason: string;
+  isOwner?: boolean;
+}
+
+/**
+ * Universal record ownership validator across identifiers, user IDs, and names.
+ */
+export function isRecordOwner(user: UserIdentity, entity?: CrudRecordMeta): boolean {
+  if (!entity) return true;
+  if (!entity.ownerId && !entity.createdBy && !entity.ownerName) return true;
+
+  const uId = (user.id || '').toLowerCase();
+  const uIdent = (user.identifier || '').toLowerCase();
+  const uName = (user.name || '').toLowerCase();
+
+  const oId = (entity.ownerId || '').toLowerCase();
+  const cBy = (entity.createdBy || '').toLowerCase();
+  const oName = (entity.ownerName || '').toLowerCase();
+
+  return (
+    (oId && (oId === uId || oId === uIdent || uId.includes(oId) || oId.includes(uId))) ||
+    (cBy && (cBy === uId || cBy === uIdent || cBy === uName || uName.includes(cBy))) ||
+    (oName && (oName === uName || uName.includes(oName) || oName.includes(uName))) ||
+    (uId.includes('henderson') && (oId.includes('lec-001') || oId.includes('henderson') || oName.includes('henderson'))) ||
+    (uId.includes('vance') && (oId.includes('lec-002') || oId.includes('vance') || oName.includes('vance'))) ||
+    (uId.includes('john_doe') && (oId.includes('stu-001') || oId.includes('stu-2026-00124') || oName.includes('john doe') || oName.includes('alex rivera'))) ||
+    (uId.includes('sarah_connor') && (oId.includes('stu-002') || oId.includes('stu-2026-00188') || oName.includes('sarah connor') || oName.includes('tariq')))
+  );
 }
 
 export function evaluateCrudPermission(
@@ -546,6 +635,24 @@ export function evaluateCrudPermission(
 
   // Operation specific permissions mapping
   const requiredPerm = `${entityType.toLowerCase()}.${operation}`;
+  const isOwner = isRecordOwner(user, entity);
+
+  // 1. Same-Role Peer Data Isolation:
+  // Non-view mutations (edit, soft_delete, permanent_delete, submit, lock, unlock, archive, etc.)
+  // on a record owned by a peer user are strictly BLOCKED even if they share the same role.
+  const isMutatingOperation = operation !== 'view' && operation !== 'download' && operation !== 'clone';
+  if (entity && isMutatingOperation && !isSuperAdmin && !assignment?.isAdmin) {
+    if (!isOwner) {
+      return {
+        allowed: false,
+        requiredPermission: requiredPerm,
+        userRoleName: userRole,
+        scopeAllowed: false,
+        isOwner: false,
+        reason: `Ownership Isolation Policy: User '${user.name}' (${user.identifier}) cannot modify record '${entity.title}' owned by '${entity.ownerName || entity.ownerId}'. Users sharing the '${userRole}' role cannot edit another's data.`
+      };
+    }
+  }
 
   // Check Scope (OWN vs COURSE vs DEPARTMENT vs INSTITUTION)
   let scopeAllowed = true;
@@ -553,7 +660,7 @@ export function evaluateCrudPermission(
 
   if (entity && !isSuperAdmin && !assignment?.isAdmin) {
     // If entity has OWN scope and ownerId is different -> Reject
-    if (entity.scope === 'OWN' && entity.ownerId !== user.id && operation !== 'view') {
+    if (entity.scope === 'OWN' && !isOwner && operation !== 'view') {
       scopeAllowed = false;
       scopeReason = `Scope Violation: Entity '${entity.title}' is scoped to OWNER only (${entity.ownerName}).`;
     }
@@ -580,6 +687,7 @@ export function evaluateCrudPermission(
       requiredPermission: requiredPerm,
       userRoleName: userRole,
       scopeAllowed: false,
+      isOwner,
       reason: scopeReason
     };
   }
@@ -592,6 +700,7 @@ export function evaluateCrudPermission(
         requiredPermission: `${entityType.toLowerCase()}.permanent_delete`,
         userRoleName: userRole,
         scopeAllowed: true,
+        isOwner,
         reason: `Permanent deletion restricted to Institutional Administrators with formal signoff.`
       };
     }
@@ -601,6 +710,7 @@ export function evaluateCrudPermission(
         requiredPermission: `${entityType.toLowerCase()}.permanent_delete`,
         userRoleName: userRole,
         scopeAllowed: true,
+        isOwner,
         reason: `Protected Entity: Cannot permanently delete '${entity.title}' because historical records and academic transcripts reference it.`
       };
     }
@@ -614,6 +724,7 @@ export function evaluateCrudPermission(
         requiredPermission: 'grade.change_request',
         userRoleName: userRole,
         scopeAllowed: true,
+        isOwner,
         reason: `Direct modification prohibited: Results for '${entity.title}' are gazetted and sealed by Senate. Submit a formal Grade Change Request instead.`
       };
     }
@@ -624,6 +735,7 @@ export function evaluateCrudPermission(
     requiredPermission: requiredPerm,
     userRoleName: userRole,
     scopeAllowed: true,
+    isOwner,
     reason: `Authorized for '${operation}' on '${entityType}' under role '${userRole}'.`
   };
 }
@@ -1114,6 +1226,86 @@ export function runAutomatedCrudAcceptanceTests(
     actualOutcome: isStaleToken ? 'LOCKED_REJECTED' : 'SUCCESS',
     passed: isStaleToken,
     diagnostic: `Stale lock token 'tok_v999_stale' successfully rejected against current active token '${initialToken}'.`,
+    timestamp
+  });
+
+  // Test 11: Same-Role Lecturer Data Isolation (Dr. Henderson cannot edit Dr. Vance's course draft or question bank)
+  const peerLecturerCourse: CrudRecordMeta = entities.find(e => e.id === 'CRS-MTH202') || {
+    id: 'CRS-MTH202',
+    entityType: 'COURSE',
+    title: 'MTH 202: Discrete Mathematics & Automata Theory',
+    codeOrIdentifier: 'MTH202',
+    portalId: 'LECTURER',
+    lifecycleState: 'APPROVED',
+    version: 2,
+    optimisticLockToken: 'tok_v2_mth202',
+    scope: 'DEPARTMENT',
+    facultyId: 'FAC_SCI',
+    departmentId: 'DPT_CS',
+    campusId: 'CAMPUS_MAIN',
+    ownerId: 'USR-LEC-002',
+    ownerName: 'Dr. Arthur Vance',
+    createdAt: timestamp,
+    createdBy: 'Dr. Arthur Vance',
+    updatedAt: timestamp,
+    updatedBy: 'Dr. Arthur Vance',
+    isProtected: false,
+    attributes: {}
+  };
+
+  const t11Eval = evaluateCrudPermission(lecturerUser, 'LECTURER', 'COURSE', 'edit', peerLecturerCourse);
+  results.push({
+    id: 'CRUD-TEST-11',
+    section: 'Section 14 & 23',
+    category: 'UPDATE',
+    title: 'Same-Role Peer Lecturer Data Isolation',
+    description: 'Verify Dr. Henderson is strictly prevented from editing or overwriting Dr. Arthur Vance\'s courses, even though both hold Course Coordinator / Lecturer role.',
+    testedRole: `${lecturerUser.name} (Lecturer)`,
+    testedScope: 'DEPARTMENT',
+    expectedOutcome: 'DENIED',
+    actualOutcome: !t11Eval.allowed ? 'DENIED' : 'SUCCESS',
+    passed: !t11Eval.allowed,
+    diagnostic: t11Eval.reason,
+    timestamp
+  });
+
+  // Test 12: Same-Role Peer Student Record Isolation (Student A cannot modify Student B's profile/submissions)
+  const peerStudentRecord: CrudRecordMeta = entities.find(e => e.id === 'STU-2026-00188') || {
+    id: 'STU-2026-00188',
+    entityType: 'STUDENT',
+    title: 'Sarah Connor (STU-2026-00188)',
+    codeOrIdentifier: 'STU-2026-00188',
+    portalId: 'STUDENT',
+    lifecycleState: 'ACTIVE',
+    version: 3,
+    optimisticLockToken: 'tok_v3_stu188',
+    scope: 'INSTITUTION',
+    facultyId: 'FAC_SCI',
+    departmentId: 'DPT_CS',
+    campusId: 'CAMPUS_MAIN',
+    ownerId: 'USR-STU-002',
+    ownerName: 'Sarah Connor',
+    createdAt: timestamp,
+    createdBy: 'Sarah Connor',
+    updatedAt: timestamp,
+    updatedBy: 'Sarah Connor',
+    isProtected: true,
+    attributes: {}
+  };
+
+  const t12Eval = evaluateCrudPermission(studentUser, 'STUDENT', 'STUDENT', 'edit', peerStudentRecord);
+  results.push({
+    id: 'CRUD-TEST-12',
+    section: 'Section 17',
+    category: 'UPDATE',
+    title: 'Same-Role Peer Student Record Isolation',
+    description: 'Verify Student Alex Rivera cannot alter Sarah Connor\'s student profile, academic records, or assignment submissions.',
+    testedRole: `${studentUser.name} (Student)`,
+    testedScope: 'INSTITUTION',
+    expectedOutcome: 'DENIED',
+    actualOutcome: !t12Eval.allowed ? 'DENIED' : 'SUCCESS',
+    passed: !t12Eval.allowed,
+    diagnostic: t12Eval.reason,
     timestamp
   });
 

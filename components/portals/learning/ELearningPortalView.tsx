@@ -153,19 +153,16 @@ export function ELearningPortalView() {
           
           {/* Welcome Banner */}
           <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-teal-950/70 border border-emerald-800/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Separate E-Learning Environment
+                  E-Learning Environment
                 </span>
                 <span className="text-xs text-slate-400 font-mono">Role: {roleName}</span>
               </div>
               <h1 className="text-2xl font-black text-white tracking-tight">
-                E-Learning & Interactive Curriculum Hub
+                Curriculum & Assessment Hub
               </h1>
-              <p className="text-xs text-slate-300 max-w-xl">
-                Dedicated learning environment with isolated course management, assignment dropboxes, online tests, and grading tools.
-              </p>
             </div>
 
             {/* Cross-portal bridges */}
@@ -604,8 +601,7 @@ export function ELearningPortalView() {
         <PortalDataLifecycleManager
           portalId="ELEARNING"
           allowedEntityTypes={['ASSIGNMENT', 'QUESTION_BANK', 'COURSE']}
-          title="e-Learning Content & Assessment Lifecycle"
-          subtitle="Manage drafts, assignments, question bank datasets, and course module lifecycle with versioning and batch exports."
+          title="Content & Assessment Lifecycle"
         />
       )}
 

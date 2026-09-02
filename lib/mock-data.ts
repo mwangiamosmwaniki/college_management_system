@@ -46,6 +46,36 @@ import {
 
 export const PORTAL_REGISTRY: PortalDefinition[] = [
   {
+    id: 'PUBLIC',
+    name: 'Public Website & Prospectus',
+    code: 'PUB_WEB',
+    description: 'Public landing website, programme catalogue, department directory, news, downloads & fee structures.',
+    urlPrefix: '/public',
+    status: 'ONLINE',
+    version: 'v2.0.0',
+    ownerDepartment: 'Public Relations & Marketing',
+    adminRole: 'Webmaster',
+    themeColor: 'emerald',
+    accentColor: '#059669',
+    iconName: 'Globe',
+    defaultRoles: ['Public Visitor', 'Webmaster', 'PR Officer']
+  },
+  {
+    id: 'APPLICANT',
+    name: 'Applicant & Admissions Portal',
+    code: 'APP_ADM',
+    description: 'Online application wizard, document uploads, M-Pesa application fee, and admission offer tracker.',
+    urlPrefix: '/applicant',
+    status: 'ONLINE',
+    version: 'v2.4.0',
+    ownerDepartment: 'Academic Admissions Directorate',
+    adminRole: 'Admissions Officer',
+    themeColor: 'teal',
+    accentColor: '#0d9488',
+    iconName: 'UserPlus',
+    defaultRoles: ['Applicant', 'Admissions Officer', 'Admissions Administrator']
+  },
+  {
     id: 'STUDENT',
     name: 'Student Portal',
     code: 'STU_SVC',
@@ -87,6 +117,127 @@ export const PORTAL_REGISTRY: PortalDefinition[] = [
       'Lecturer Monitor',
       'Lecturer Portal Administrator'
     ]
+  },
+  {
+    id: 'HOD',
+    name: 'HOD & Academic Department Portal',
+    code: 'HOD_ACAD',
+    description: 'Curricula management, lecturer unit allocation, workload balancing, timetable conflict resolution & marks moderation.',
+    urlPrefix: '/hod',
+    status: 'ONLINE',
+    version: 'v2.1.0',
+    ownerDepartment: 'Academic Departments',
+    adminRole: 'Head of Department',
+    themeColor: 'indigo',
+    accentColor: '#4338ca',
+    iconName: 'Building',
+    defaultRoles: ['Head of Department', 'Departmental Moderator', 'Curriculum Coordinator']
+  },
+  {
+    id: 'REGISTRAR',
+    name: 'Registrar & Academic Affairs',
+    code: 'REG_OFF',
+    description: 'Central student master registry, matriculation, admission handover, academic calendar & graduation gazettes.',
+    urlPrefix: '/registrar',
+    status: 'ONLINE',
+    version: 'v3.0.0',
+    ownerDepartment: 'Academic Affairs & Registry',
+    adminRole: 'Registrar (Academic Affairs)',
+    themeColor: 'blue',
+    accentColor: '#1d4ed8',
+    iconName: 'FileCheck',
+    defaultRoles: ['Registrar (Academic Affairs)', 'Assistant Registrar', 'Admissions Registrar']
+  },
+  {
+    id: 'EXAMINATIONS',
+    name: 'Examinations & Marks Board',
+    code: 'EXAM_SEC',
+    description: 'Exam scheduling, invigilation, marks entry, moderation, and results publication.',
+    urlPrefix: '/exams',
+    status: 'ONLINE',
+    version: 'v2.2.0',
+    ownerDepartment: 'Academic Planning & Exam Office',
+    adminRole: 'Examination Administrator',
+    themeColor: 'rose',
+    accentColor: '#e11d48',
+    iconName: 'FileSpreadsheet',
+    defaultRoles: [
+      'Examination Administrator',
+      'Examination Manager',
+      'Examination Officer',
+      'Moderator',
+      'Marks Entry Officer',
+      'Examination Monitor',
+      'Registrar'
+    ]
+  },
+  {
+    id: 'FINANCE',
+    name: 'Finance & Student Accounts',
+    code: 'FIN_ACC',
+    description: 'Fee collection, cashiering, verification, reconciliation, and segregation of duties.',
+    urlPrefix: '/finance',
+    status: 'ONLINE',
+    version: 'v4.0.2',
+    ownerDepartment: 'Bursary & Financial Services',
+    adminRole: 'Finance Administrator',
+    themeColor: 'violet',
+    accentColor: '#7c3aed',
+    iconName: 'Receipt',
+    defaultRoles: [
+      'Finance Administrator',
+      'Finance Manager',
+      'Accountant',
+      'Cashier',
+      'Finance Officer',
+      'Finance Monitor',
+      'Auditor'
+    ]
+  },
+  {
+    id: 'ATTACHMENT',
+    name: 'Industrial Attachment & Careers',
+    code: 'ATT_IND',
+    description: 'Student industry placement, digital weekly logbooks, lecturer site assessment rubrics & certification.',
+    urlPrefix: '/attachment',
+    status: 'ONLINE',
+    version: 'v2.0.0',
+    ownerDepartment: 'Industrial Attachment & Liaison Directorate',
+    adminRole: 'Industrial Liaison Officer',
+    themeColor: 'amber',
+    accentColor: '#d97706',
+    iconName: 'Briefcase',
+    defaultRoles: ['Industrial Liaison Officer', 'Visiting Assessor', 'Industry Supervisor', 'Student Attaché']
+  },
+  {
+    id: 'PROCUREMENT',
+    name: 'Procurement & Stores Management',
+    code: 'PROC_STR',
+    description: 'Department requisitions, approval chain, purchase orders, store inventory, and goods received notes (GRN).',
+    urlPrefix: '/procurement',
+    status: 'ONLINE',
+    version: 'v2.2.0',
+    ownerDepartment: 'Procurement & Supplies Directorate',
+    adminRole: 'Head of Procurement',
+    themeColor: 'orange',
+    accentColor: '#ea580c',
+    iconName: 'PackageCheck',
+    defaultRoles: ['Head of Procurement', 'Procurement Officer', 'Storekeeper', 'Requisitioner']
+  },
+  {
+    id: 'PRINCIPAL',
+    name: 'Principal & Executive Dashboard',
+    code: 'EXEC_DIR',
+    description: 'High-level institutional intelligence, enrollment analytics, financial collection, departmental KPIs & authorizations.',
+    urlPrefix: '/principal',
+    status: 'ONLINE',
+    version: 'v2.5.0',
+    ownerDepartment: 'Office of the Principal',
+    adminRole: 'Principal / CEO',
+    themeColor: 'purple',
+    accentColor: '#9333ea',
+    iconName: 'LineChart',
+    defaultRoles: ['Principal / CEO', 'Deputy Principal (Academics)', 'Deputy Principal (Admin & Finance)']
   },
   {
     id: 'ELEARNING',
@@ -133,52 +284,6 @@ export const PORTAL_REGISTRY: PortalDefinition[] = [
       'Digital Librarian',
       'Library Monitor',
       'Library Member'
-    ]
-  },
-  {
-    id: 'FINANCE',
-    name: 'Finance & Student Accounts',
-    code: 'FIN_ACC',
-    description: 'Fee collection, cashiering, verification, reconciliation, and segregation of duties.',
-    urlPrefix: '/finance',
-    status: 'ONLINE',
-    version: 'v4.0.2',
-    ownerDepartment: 'Bursary & Financial Services',
-    adminRole: 'Finance Administrator',
-    themeColor: 'violet',
-    accentColor: '#7c3aed',
-    iconName: 'Receipt',
-    defaultRoles: [
-      'Finance Administrator',
-      'Finance Manager',
-      'Accountant',
-      'Cashier',
-      'Finance Officer',
-      'Finance Monitor',
-      'Auditor'
-    ]
-  },
-  {
-    id: 'EXAMINATIONS',
-    name: 'Examinations & Marks Board',
-    code: 'EXAM_SEC',
-    description: 'Exam scheduling, invigilation, marks entry, moderation, and results publication.',
-    urlPrefix: '/exams',
-    status: 'ONLINE',
-    version: 'v2.2.0',
-    ownerDepartment: 'Academic Planning & Exam Office',
-    adminRole: 'Examination Administrator',
-    themeColor: 'rose',
-    accentColor: '#e11d48',
-    iconName: 'FileSpreadsheet',
-    defaultRoles: [
-      'Examination Administrator',
-      'Examination Manager',
-      'Examination Officer',
-      'Moderator',
-      'Marks Entry Officer',
-      'Examination Monitor',
-      'Registrar'
     ]
   },
   {
@@ -824,6 +929,39 @@ export const INITIAL_USERS: UserIdentity[] = [
     ]
   },
   {
+    id: 'usr_sarah_connor',
+    identifier: 'STU-2026-00188',
+    name: 'Sarah Connor',
+    email: 'sarah.connor@student.apex.edu',
+    avatarUrl: 'https://picsum.photos/seed/sarahconnor/120/120',
+    institution: 'Apex Institute of Technology',
+    department: 'Computer Science',
+    faculty: 'Faculty of Computing & Information Systems',
+    campus: 'Main Campus',
+    phone: '+1 (555) 345-6789',
+    status: 'ACTIVE',
+    portalAssignments: [
+      {
+        portalId: 'STUDENT',
+        roleId: 'ROLE_STUDENT',
+        roleName: 'Student',
+        assignedAt: '2026-01-10'
+      },
+      {
+        portalId: 'ELEARNING',
+        roleId: 'ROLE_LMS_LEARNER',
+        roleName: 'Learner',
+        assignedAt: '2026-01-10'
+      },
+      {
+        portalId: 'ELIBRARY',
+        roleId: 'ROLE_LIB_MEMBER',
+        roleName: 'Library Member',
+        assignedAt: '2026-01-10'
+      }
+    ]
+  },
+  {
     id: 'usr_sarah_tech',
     identifier: 'EMP-2024-042',
     name: 'Dr. Sarah Jenkins',
@@ -910,6 +1048,54 @@ export const INITIAL_USERS: UserIdentity[] = [
         roleId: 'ROLE_LIB_MEMBER',
         roleName: 'Library Member (Faculty Tier)',
         assignedAt: '2022-09-01'
+      }
+    ]
+  },
+  {
+    id: 'usr_dr_vance',
+    identifier: 'FAC-2023-049',
+    name: 'Dr. Arthur Vance',
+    email: 'a.vance@faculty.apex.edu',
+    avatarUrl: 'https://picsum.photos/seed/arthurvance/120/120',
+    institution: 'Apex Institute of Technology',
+    department: 'Computer Science',
+    faculty: 'Faculty of Computing & Information Systems',
+    campus: 'Main Campus',
+    status: 'ACTIVE',
+    portalAssignments: [
+      {
+        portalId: 'LECTURER',
+        roleId: 'ROLE_COURSE_COORDINATOR',
+        roleName: 'Course Coordinator & Senior Lecturer',
+        scope: {
+          departmentId: 'dept_cs',
+          courseIds: ['MTH202', 'CSC205']
+        },
+        assignedAt: '2023-09-01'
+      },
+      {
+        portalId: 'ELEARNING',
+        roleId: 'ROLE_LMS_INSTRUCTOR',
+        roleName: 'Course Instructor (MTH202 only)',
+        scope: {
+          courseIds: ['crs_mth202']
+        },
+        assignedAt: '2023-09-15'
+      },
+      {
+        portalId: 'EXAMINATIONS',
+        roleId: 'ROLE_EXAM_LECTURER',
+        roleName: 'Marks Entry Officer (Lecturer)',
+        scope: {
+          courseIds: ['crs_mth202']
+        },
+        assignedAt: '2024-02-01'
+      },
+      {
+        portalId: 'ELIBRARY',
+        roleId: 'ROLE_LIB_MEMBER',
+        roleName: 'Library Member (Faculty Tier)',
+        assignedAt: '2023-09-01'
       }
     ]
   },
@@ -1294,41 +1480,41 @@ export const INITIAL_USERS: UserIdentity[] = [
 ];
 
 export const DEFAULT_INSTITUTIONAL_SETTINGS: InstitutionalSettings = {
-  name: 'Apex Institute of Technology',
-  shortName: 'APEX TECH',
-  code: 'AIT-UNIVERSITAS',
-  motto: 'Excellence in Innovation, Science, Technology & Integrity',
+  name: 'Kenya Technical & Vocational Training College',
+  shortName: 'KTVTC',
+  code: 'KTVTC-KENYA',
+  motto: 'Skills for Industry, Technology & Innovation',
   logoUrl: 'https://images.unsplash.com/photo-1592280771190-3e2e4d571952?w=160&h=160&fit=crop&q=80',
   crestType: 'classic',
-  primaryColor: '#1e3a8a', // Deep Academic Navy
+  primaryColor: '#047857', // Emerald green
   secondaryColor: '#0f172a', // Slate 900
-  accentColor: '#d97706', // Gold / Amber
-  addressLine1: '100 Innovation Boulevard, University Science Park',
-  addressLine2: 'Senate Building, Academic Complex',
-  city: 'Tech City',
-  stateCountry: 'California, USA',
-  postalCode: '94043',
-  phone: '+1 (800) 555-APEX',
-  altPhone: '+1 (555) 019-2834',
-  email: 'info@apex.edu',
-  admissionEmail: 'admissions@apex.edu',
-  website: 'https://www.apex.edu',
-  accreditationBody: 'Chartered by Higher Education Accreditation Commission (HEAC) • ABET & NUC Certified',
-  charterNumber: 'HEAC/REG/2012/094-UNIV',
-  establishedYear: '1984',
-  viceChancellorName: 'Prof. Arthur Vance, Ph.D, FNAS',
-  viceChancellorTitle: 'Vice Chancellor & President',
-  registrarName: 'Prof. Walter Sterling, Ph.D',
-  registrarTitle: 'Registrar & Secretary to Senate',
+  accentColor: '#d97706', // Amber gold
+  addressLine1: 'Nairobi Main Campus, Off Ngong Road',
+  addressLine2: 'Administration & Registry Complex',
+  city: 'Nairobi',
+  stateCountry: 'Nairobi County, Kenya',
+  postalCode: 'P.O. Box 45321 - 00100',
+  phone: '+254 (0) 20 271 8900',
+  altPhone: '+254 712 345 678',
+  email: 'info@ktvtc.ac.ke',
+  admissionEmail: 'admissions@ktvtc.ac.ke',
+  website: 'https://www.ktvtc.ac.ke',
+  accreditationBody: 'Technical and Vocational Education and Training Authority (TVETA) • KNEC Exam Centre #20401102',
+  charterNumber: 'TVETA/REG/2020/0248',
+  establishedYear: '1982',
+  viceChancellorName: 'Dr. Josephat K. Cheruiyot, Ph.D, Eng.',
+  viceChancellorTitle: 'Principal & Chief Executive Officer',
+  registrarName: 'Mrs. Grace W. Mwangi, M.Ed',
+  registrarTitle: 'Registrar (Academic Affairs)',
   registrarSignatureUrl: 'https://picsum.photos/seed/sigreg/240/80',
-  bursarName: 'Dr. Robert Thorne, FCA, ACTI',
-  bursarTitle: 'University Bursar & Chief Financial Officer',
+  bursarName: 'Mr. David O. Omondi, CPA-K',
+  bursarTitle: 'University Bursar & Head of Finance',
   bursarSignatureUrl: 'https://picsum.photos/seed/sigbur/240/80',
   officialSealUrl: 'https://picsum.photos/seed/sealuniv/150/150',
   letterheadHeaderStyle: 'CLASSIC_CREST',
   watermarkOpacity: 0.05,
-  footerLegalText: 'This is an official computer-generated document issued under the seal of the University Registry. Any alteration or unauthorized reproduction renders this document invalid. Verify online with the security reference code at apex.edu/verify.',
-  securityVerificationUrl: 'https://apex.edu/verify/sec-doc',
+  footerLegalText: 'This is an official computer-generated institutional document issued under the seal of the Kenya Technical & Vocational Training College Registry. Any alteration or unauthorized reproduction renders this document invalid. Verify online with the security reference code at ktvtc.ac.ke/verify.',
+  securityVerificationUrl: 'https://ktvtc.ac.ke/verify/sec-doc',
   enableQrValidation: true,
   enableDigitalSignatures: true,
   enableEmbossedSeal: true

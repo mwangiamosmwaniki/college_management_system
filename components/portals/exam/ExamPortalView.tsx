@@ -142,19 +142,16 @@ export function ExamPortalView() {
       
       {/* Welcome Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-rose-950/70 via-slate-900 to-red-950/70 border border-rose-800/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-              Senate Examinations & Academic Records
+              Examinations & Records
             </span>
             <span className="text-xs text-slate-400 font-mono">Role: {roleName}</span>
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
             Examinations, Marks & Senate Gazetting
           </h1>
-          <p className="text-xs text-slate-300 max-w-xl">
-            Controlled grade computation, moderation records, clearance verification, and Senate certificate issuance.
-          </p>
         </div>
 
         <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-right">
@@ -484,8 +481,7 @@ export function ExamPortalView() {
         <PortalDataLifecycleManager
           portalId="EXAMINATIONS"
           allowedEntityTypes={['EXAM_RESULT', 'GRADE_CHANGE_REQUEST', 'COURSE']}
-          title="Examination Broadsheets & Grade Change Governance"
-          subtitle="Governed moderation lifecycle: DRAFT marks entry -> HOD Review -> Senate Approval -> Gazette Lock."
+          title="Examination Broadsheets & Grade Governance"
         />
       )}
 
