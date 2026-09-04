@@ -330,8 +330,6 @@ export function StudentPortalView() {
               label="Cumulative CGPA"
               value={studentProfile.cgpa.toFixed(2)}
               subtext="Scale: 4.00 Max"
-              badge="First Class"
-              badgeVariant="success"
               accentColor="#34d399"
               icon={<Award className="w-4 h-4" />}
             />
@@ -345,16 +343,12 @@ export function StudentPortalView() {
               label="Semester Registration"
               value="Cleared"
               subtext="4 Courses (13 Units)"
-              badge="Active"
-              badgeVariant="info"
               icon={<CheckCircle className="w-4 h-4" />}
             />
             <StatCard
               label="Bursary Balance"
               value="$0.00"
               subtext="Settled"
-              badge="Cleared"
-              badgeVariant="success"
               icon={<CreditCard className="w-4 h-4" />}
             />
           </div>
@@ -470,8 +464,6 @@ export function StudentPortalView() {
         <div className="space-y-6">
           <PageHeader
             title="Student Profile"
-            badge="Verified"
-            badgeVariant="success"
             actions={
               <button
                 onClick={handleOpenAttestationLetter}
@@ -490,10 +482,7 @@ export function StudentPortalView() {
                   {currentUser.name.charAt(0)}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-white">{currentUser.name}</h2>
-                    <StatusBadge variant="success" size="sm">Active</StatusBadge>
-                  </div>
+                  <h2 className="text-lg font-bold text-white">{currentUser.name}</h2>
                   <p className="text-xs text-slate-400 font-mono mt-0.5">
                     {studentProfile.matricNumber} • {currentUser.id}
                   </p>
@@ -719,8 +708,6 @@ export function StudentPortalView() {
         <div className="space-y-6">
           <PageHeader
             title="Lecture Timetable"
-            badge="Semester 1"
-            badgeVariant="info"
             actions={
               <button
                 onClick={handleOpenCourseSlip}
@@ -817,13 +804,11 @@ export function StudentPortalView() {
         <div className="space-y-6">
           <PageHeader
             title="Results & CGPA"
-            badge="Senate Gazetted"
-            badgeVariant="success"
             actions={
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleOpenAttestationLetter}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 cursor-pointer"
                 >
                   <FileText className="w-3.5 h-3.5 text-blue-400" />
                   <span>Attestation Letter</span>
@@ -931,8 +916,6 @@ export function StudentPortalView() {
         <div className="space-y-6">
           <PageHeader
             title="Fees & Invoices"
-            badge="Ledger Reconciled"
-            badgeVariant="success"
           />
 
           <DataTable
@@ -1029,8 +1012,6 @@ export function StudentPortalView() {
         <div className="space-y-6">
           <PageHeader
             title="Clearance Checklist"
-            badge="All Cleared"
-            badgeVariant="success"
             actions={
               <button
                 onClick={handleOpenClearanceCertificate}
@@ -1231,8 +1212,6 @@ export function StudentPortalView() {
         <div className="space-y-6">
           <PageHeader
             title="Documents & Transcripts"
-            badge="Senate Certified"
-            badgeVariant="brand"
           />
 
           <DataTable

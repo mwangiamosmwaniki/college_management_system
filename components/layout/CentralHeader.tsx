@@ -69,7 +69,17 @@ export function CentralHeader() {
     }
   };
 
-  const filteredPortals = portals.filter(p =>
+  const isSuperAdmin = currentUser.portalAssignments.some(
+    a => a.portalId === 'ADMIN' && (a.roleId === 'ROLE_SUPER_ADMIN' || a.isAdmin)
+  );
+
+  // Only show portals linked to the role of the signed in account
+  const roleLinkedPortals = portals.filter(portal => {
+    if (isSuperAdmin) return true;
+    return currentUser.portalAssignments.some(a => a.portalId === portal.id);
+  });
+
+  const filteredPortals = roleLinkedPortals.filter(p =>
     !portalSearch ||
     p.name.toLowerCase().includes(portalSearch.toLowerCase()) ||
     p.code.toLowerCase().includes(portalSearch.toLowerCase())
@@ -99,21 +109,11 @@ export function CentralHeader() {
               </div>
             )}
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm tracking-tight text-white line-clamp-1 max-w-[180px] sm:max-w-xs">
-                  {institutionalSettings.name}
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 shrink-0 font-mono">
-                  {institutionalSettings.shortName || 'ERP'}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-mono flex items-center gap-1.5">
-                <span>SSO Central Auth</span>
-                <span className="text-slate-600">•</span>
-                <span className="text-emerald-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Active RBAC
-                </span>
+              <span className="font-bold text-sm tracking-tight text-white line-clamp-1 max-w-[180px] sm:max-w-xs">
+                {institutionalSettings.name}
+              </span>
+              <p className="text-xs text-slate-400">
+                Institutional Enterprise Portal
               </p>
             </div>
           </div>
@@ -134,68 +134,63 @@ export function CentralHeader() {
             {isPortalLauncherOpen && (
               <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-80 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-2 z-50 animate-in fade-in duration-100">
                 <div className="px-2 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800 flex items-center justify-between font-mono">
-                  <span>Institutional Portals</span>
-                  <span className="text-slate-500">10 Modules</span>
+                  <span>Linked Portals ({currentUser.name.split(' ')[0]})</span>
+                  <span className="text-slate-500">{roleLinkedPortals.length} {roleLinkedPortals.length === 1 ? 'Module' : 'Modules'}</span>
                 </div>
 
-                <div className="p-1.5">
-                  <div className="relative mb-2">
-                    <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={portalSearch}
-                      onChange={(e) => setPortalSearch(e.target.value)}
-                      placeholder="Filter portals..."
-                      className="w-full pl-8 pr-2.5 py-1 text-xs rounded bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
-                    />
+                {roleLinkedPortals.length > 3 && (
+                  <div className="p-1.5">
+                    <div className="relative mb-1">
+                      <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={portalSearch}
+                        onChange={(e) => setPortalSearch(e.target.value)}
+                        placeholder="Filter my portals..."
+                        className="w-full pl-8 pr-2.5 py-1 text-xs rounded bg-slate-950 border border-slate-800 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="max-h-72 overflow-y-auto py-0.5 space-y-1">
-                  {filteredPortals.map(portal => {
-                    const isAssigned = currentUser.portalAssignments.some(a => a.portalId === portal.id) || 
-                      currentUser.portalAssignments.some(a => a.portalId === 'ADMIN');
-                    const isCurrent = portal.id === activePortalId;
-                    const assignment = currentUser.portalAssignments.find(a => a.portalId === portal.id);
+                  {filteredPortals.length === 0 ? (
+                    <div className="py-5 text-center text-xs text-slate-400 font-mono">
+                      No linked portals found
+                    </div>
+                  ) : (
+                    filteredPortals.map(portal => {
+                      const isCurrent = portal.id === activePortalId;
+                      const assignment = currentUser.portalAssignments.find(a => a.portalId === portal.id);
+                      const roleDisplay = assignment ? assignment.roleName : 'Super Administrator';
 
-                    return (
-                      <button
-                        key={portal.id}
-                        onClick={() => {
-                          navigateToPortal(portal.id);
-                          setIsPortalLauncherOpen(false);
-                        }}
-                        className={`w-full text-left px-2.5 py-2 rounded-lg flex items-start gap-2.5 transition text-xs cursor-pointer ${
-                          isCurrent
-                            ? 'bg-blue-600/20 border border-blue-500/40 text-blue-200'
-                            : isAssigned
-                            ? 'hover:bg-slate-800/80 text-slate-200'
-                            : 'opacity-50 hover:bg-slate-800/40 text-slate-400'
-                        }`}
-                      >
-                        <div className="p-1.5 rounded-md bg-slate-950 border border-slate-800 shrink-0 mt-0.5">
-                          {getPortalIcon(portal.id)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-slate-100 truncate">{portal.name}</span>
-                            {!isAssigned && (
-                              <span className="flex items-center gap-1 text-[9px] text-amber-400 bg-amber-500/10 px-1 py-0.2 rounded border border-amber-500/20 font-mono">
-                                <Lock className="w-2.5 h-2.5" /> No Role
-                              </span>
-                            )}
+                      return (
+                        <button
+                          key={portal.id}
+                          id={`portal-btn-${portal.id.toLowerCase()}`}
+                          onClick={() => {
+                            navigateToPortal(portal.id);
+                            setIsPortalLauncherOpen(false);
+                          }}
+                          className={`w-full text-left px-2.5 py-2 rounded-lg flex items-start gap-2.5 transition text-xs cursor-pointer ${
+                            isCurrent
+                              ? 'bg-blue-600/20 border border-blue-500/40 text-blue-200'
+                              : 'hover:bg-slate-800/80 text-slate-200'
+                          }`}
+                        >
+                          <div className="p-1.5 rounded-md bg-slate-950 border border-slate-800 shrink-0 mt-0.5">
+                            {getPortalIcon(portal.id)}
                           </div>
-                          <p className="text-[10px] text-slate-400 truncate">
-                            {isAssigned ? (
-                              <span className="text-emerald-400 font-mono">Role: {assignment ? assignment.roleName : 'Super Admin'}</span>
-                            ) : (
-                              portal.description
-                            )}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
+                          <div className="flex-1 min-w-0">
+                            <span className="font-semibold text-slate-100 truncate block">{portal.name}</span>
+                            <p className="text-[10px] text-slate-400 font-mono truncate mt-0.5">
+                              Role: {roleDisplay}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
@@ -317,10 +312,7 @@ export function CentralHeader() {
               {isPersonaMenuOpen && (
                 <div className="absolute right-0 mt-2 w-96 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-2.5 z-50 animate-in fade-in duration-100">
                   <div className="px-2 py-1.5 border-b border-slate-800 mb-2">
-                    <div className="text-xs font-bold text-white">Switch User Persona</div>
-                    <p className="text-[11px] text-slate-400">
-                      Test multi-role experiences across student, faculty, bursar, and admin accounts.
-                    </p>
+                    <div className="text-xs font-bold text-white">Switch User Account</div>
                   </div>
                   <div className="max-h-96 overflow-y-auto space-y-1.5">
                     {users.map(u => {
@@ -345,11 +337,6 @@ export function CentralHeader() {
                                 {u.identifier}
                               </span>
                             </div>
-                            {isSelected && (
-                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30 font-mono">
-                                Active
-                              </span>
-                            )}
                           </div>
                           
                           {/* Portal Assignments Pills */}

@@ -143,12 +143,6 @@ export function ExamPortalView() {
       {/* Welcome Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-rose-950/70 via-slate-900 to-red-950/70 border border-rose-800/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-              Examinations & Records
-            </span>
-            <span className="text-xs text-slate-400 font-mono">Role: {roleName}</span>
-          </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
             Examinations, Marks & Senate Gazetting
           </h1>
