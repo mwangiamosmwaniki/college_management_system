@@ -93,13 +93,13 @@ function ERPAppContent() {
       <CentralHeader />
 
       {/* 2. Main Portal Workspace Layout */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         {/* Portal-Specific Sidebar Navigation */}
         <PortalNavigation />
 
         {/* Dynamic Portal Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-950/80">
-          <div className="max-w-7xl mx-auto">
+        <main className="min-w-0 flex-1 overflow-y-auto bg-slate-950/80 p-3 sm:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-7xl min-w-0">
             {renderPortalView()}
           </div>
         </main>
