@@ -300,7 +300,7 @@ export function PortalNavigation() {
       {/* Main Sidebar */}
       <aside
         className={`w-64 bg-slate-900/95 border-r border-slate-800/80 flex flex-col justify-between shrink-0 text-slate-300 shadow-sm transition-all duration-200 ${
-          isMobileOpen ? 'fixed inset-y-16 left-0 z-40 block w-72' : 'hidden md:flex'
+          isMobileOpen ? 'absolute inset-y-0 left-0 z-40 flex w-[min(18rem,calc(100vw-1rem))] max-h-full' : 'hidden md:flex'
         }`}
       >
         {/* Navigation Header */}
@@ -324,7 +324,7 @@ export function PortalNavigation() {
         </div>
 
         {/* Grouped Nav Items */}
-        <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto">
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-3 space-y-4">
           {sections.map(section => {
             const sectionItems = navItems.filter(i => (i.section || 'General') === section);
             return (

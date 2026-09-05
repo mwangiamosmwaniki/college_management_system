@@ -23,7 +23,8 @@ import {
   Lock,
   Layers,
   Search,
-  Check
+  Check,
+  MoreHorizontal
 } from 'lucide-react';
 
 export function CentralHeader() {
@@ -48,6 +49,7 @@ export function CentralHeader() {
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
   const [isPortalLauncherOpen, setIsPortalLauncherOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
   const [portalSearch, setPortalSearch] = useState('');
 
   const activePortal = portals.find(p => p.id === activePortalId) || portals[0];
@@ -89,10 +91,10 @@ export function CentralHeader() {
     <header className="sticky top-0 z-40 w-full bg-slate-900 border-b border-slate-800 text-slate-100 shadow-md">
       {/* Top Global Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2 sm:h-16 sm:flex-nowrap sm:py-0">
           
           {/* Logo & Central Institutional Identity */}
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             {institutionalSettings.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -112,27 +114,27 @@ export function CentralHeader() {
               <span className="font-bold text-sm tracking-tight text-white line-clamp-1 max-w-[180px] sm:max-w-xs">
                 {institutionalSettings.name}
               </span>
-              <p className="text-xs text-slate-400">
+              <p className="hidden text-xs text-slate-400 sm:block">
                 Institutional Enterprise Portal
               </p>
             </div>
           </div>
 
           {/* Quick Portal Switcher Launcher */}
-          <div className="relative">
+          <div className="relative order-3 w-full sm:order-none sm:w-auto">
             <button
               id="portal-launcher-btn"
               onClick={() => setIsPortalLauncherOpen(!isPortalLauncherOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-750 border border-slate-700 text-xs font-medium text-slate-200 transition cursor-pointer"
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-800/90 px-3 py-2 text-left text-xs font-medium text-slate-200 transition hover:bg-slate-750 sm:w-auto sm:py-1.5"
             >
               <div className="w-2 h-2 rounded-full bg-blue-400"></div>
-              <span>Portal: <strong className="text-white font-semibold">{activePortal.name}</strong></span>
+              <span className="truncate">Portal: <strong className="font-semibold text-white">{activePortal.name}</strong></span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
 
             {/* Portal Dropdown Menu */}
             {isPortalLauncherOpen && (
-              <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-80 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-2 z-50 animate-in fade-in duration-100">
+              <div className="absolute left-0 right-0 z-50 mt-2 w-auto rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-2xl animate-in fade-in duration-100 sm:left-auto sm:right-0 sm:w-80">
                 <div className="px-2 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800 flex items-center justify-between font-mono">
                   <span>Linked Portals ({currentUser.name.split(' ')[0]})</span>
                   <span className="text-slate-500">{roleLinkedPortals.length} {roleLinkedPortals.length === 1 ? 'Module' : 'Modules'}</span>
@@ -203,7 +205,7 @@ export function CentralHeader() {
             <button
               id="security-suite-btn"
               onClick={() => setIsSecuritySuiteOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-600/15 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-600/25 text-xs font-semibold transition shadow-sm cursor-pointer"
+              className="hidden items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-600/15 px-2.5 py-1.5 text-xs font-semibold text-emerald-300 shadow-sm transition hover:bg-emerald-600/25 sm:flex sm:px-3"
               title="Execute Acceptance Tests A through O live"
             >
               <ShieldAlert className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -214,7 +216,7 @@ export function CentralHeader() {
             <button
               id="events-modal-btn"
               onClick={() => setIsEventsModalOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 transition cursor-pointer"
+              className="hidden items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700 sm:flex"
               title="Inspect Cross-Portal Event Bus"
             >
               <Radio className="w-3.5 h-3.5 text-purple-400 shrink-0" />
@@ -225,7 +227,7 @@ export function CentralHeader() {
             <button
               id="audit-drawer-btn"
               onClick={() => setIsAuditDrawerOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 transition cursor-pointer"
+              className="hidden items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-200 transition hover:bg-slate-700 sm:flex"
               title="Open Real-time Audit Trail"
             >
               <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -249,7 +251,7 @@ export function CentralHeader() {
 
               {/* Notifications Dropdown */}
               {isNotifOpen && (
-                <div className="absolute right-0 mt-2 w-80 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-2 z-50 animate-in fade-in duration-100">
+                <div className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-2xl animate-in fade-in duration-100">
                   <div className="px-2 py-1.5 text-xs font-semibold text-slate-300 border-b border-slate-800 flex items-center justify-between font-mono">
                     <span>Notifications</span>
                     <span className="text-[10px] text-blue-400">{unreadCount} Unread</span>
@@ -291,6 +293,31 @@ export function CentralHeader() {
               )}
             </div>
 
+            <div className="relative sm:hidden">
+              <button
+                id="tools-menu-btn"
+                onClick={() => setIsToolsOpen(!isToolsOpen)}
+                className="rounded-lg border border-slate-700 bg-slate-800 p-1.5 text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                title="Open platform tools"
+                aria-label="Open platform tools"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+              {isToolsOpen && (
+                <div className="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-slate-700 bg-slate-900 p-1.5 shadow-2xl">
+                  <button onClick={() => { setIsSecuritySuiteOpen(true); setIsToolsOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-slate-200 hover:bg-slate-800">
+                    <ShieldAlert className="h-3.5 w-3.5 text-emerald-400" /> RBAC Tests
+                  </button>
+                  <button onClick={() => { setIsEventsModalOpen(true); setIsToolsOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-slate-200 hover:bg-slate-800">
+                    <Radio className="h-3.5 w-3.5 text-purple-400" /> Cross-Portal Events
+                  </button>
+                  <button onClick={() => { setIsAuditDrawerOpen(true); setIsToolsOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-slate-200 hover:bg-slate-800">
+                    <FileText className="h-3.5 w-3.5 text-blue-400" /> Audit Trail
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Persona Switcher Dropdown */}
             <div className="relative">
               <button
@@ -310,7 +337,7 @@ export function CentralHeader() {
 
               {/* Persona Selection Dropdown */}
               {isPersonaMenuOpen && (
-                <div className="absolute right-0 mt-2 w-96 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-2.5 z-50 animate-in fade-in duration-100">
+                <div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-1.5rem))] rounded-xl border border-slate-700 bg-slate-900 p-2.5 shadow-2xl z-50 animate-in fade-in duration-100">
                   <div className="px-2 py-1.5 border-b border-slate-800 mb-2">
                     <div className="text-xs font-bold text-white">Switch User Account</div>
                   </div>
@@ -371,10 +398,10 @@ export function CentralHeader() {
       </div>
 
       {/* Secondary Context Banner: Portal Role and Scope */}
-      <div className="bg-slate-950 border-t border-slate-800/80 px-4 sm:px-6 lg:px-8 py-1.5">
+      <div className="border-t border-slate-800/80 bg-slate-950 px-3 py-1.5 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between text-[11px] gap-2">
           <div className="flex items-center gap-2 text-slate-300 flex-wrap">
-            <span className="font-medium text-slate-400">Context:</span>
+            <span className="hidden font-medium text-slate-400 sm:inline">Context:</span>
             <span className="px-2 py-0.2 rounded bg-blue-950/70 border border-blue-800/60 text-blue-300 font-mono font-semibold">
               {activePortal.name}
             </span>
@@ -390,9 +417,9 @@ export function CentralHeader() {
           </div>
 
           <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px]">
-            <span>{currentUser.department || 'Central Administration'}</span>
-            <span className="text-slate-700">|</span>
-            <span className="text-slate-500">{currentUser.institution}</span>
+            <span className="hidden sm:inline">{currentUser.department || 'Central Administration'}</span>
+            <span className="hidden text-slate-700 sm:inline">|</span>
+            <span className="hidden text-slate-500 sm:inline">{currentUser.institution}</span>
           </div>
         </div>
       </div>
