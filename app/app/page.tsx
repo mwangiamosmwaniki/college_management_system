@@ -35,28 +35,51 @@ function ERPAppContent() {
 
   const renderPortalView = () => {
     if (!accessEvaluation.allowed) {
-      return <AccessDeniedView portalId={activePortalId} reason={accessEvaluation.reason} />;
+      return (
+        <AccessDeniedView
+          portalId={activePortalId}
+          reason={accessEvaluation.reason}
+        />
+      );
     }
 
     switch (activePortalId) {
-      case "PUBLIC": return <PublicLandingPageView />;
-      case "APPLICANT": return <ApplicantPortalView />;
-      case "HOD": return <HODPortalView />;
-      case "REGISTRAR": return <RegistrarPortalView />;
-      case "ATTACHMENT": return <AttachmentPortalView />;
-      case "PROCUREMENT": return <ProcurementPortalView />;
-      case "PRINCIPAL": return <PrincipalExecutiveDashboardView />;
-      case "STUDENT": return <StudentPortalView />;
-      case "ELEARNING": return <ELearningPortalView />;
-      case "ELIBRARY": return <ELibraryPortalView />;
-      case "FINANCE": return <FinancePortalView />;
-      case "EXAMINATIONS": return <ExamPortalView />;
-      case "LECTURER": return <LecturerPortalView />;
-      case "ADMIN": return <AdminPortalView />;
-      case "HR": return <HrPortalView />;
-      case "ADMISSIONS": return <AdmissionsPortalView />;
-      case "HOSTEL": return <HostelPortalView />;
-      default: return <StudentPortalView />;
+      case "PUBLIC":
+        return <PublicLandingPageView />;
+      case "APPLICANT":
+        return <ApplicantPortalView />;
+      case "HOD":
+        return <HODPortalView />;
+      case "REGISTRAR":
+        return <RegistrarPortalView />;
+      case "ATTACHMENT":
+        return <AttachmentPortalView />;
+      case "PROCUREMENT":
+        return <ProcurementPortalView />;
+      case "PRINCIPAL":
+        return <PrincipalExecutiveDashboardView />;
+      case "STUDENT":
+        return <StudentPortalView />;
+      case "ELEARNING":
+        return <ELearningPortalView />;
+      case "ELIBRARY":
+        return <ELibraryPortalView />;
+      case "FINANCE":
+        return <FinancePortalView />;
+      case "EXAMINATIONS":
+        return <ExamPortalView />;
+      case "LECTURER":
+        return <LecturerPortalView />;
+      case "ADMIN":
+        return <AdminPortalView />;
+      case "HR":
+        return <HrPortalView />;
+      case "ADMISSIONS":
+        return <AdmissionsPortalView />;
+      case "HOSTEL":
+        return <HostelPortalView />;
+      default:
+        return <StudentPortalView />;
     }
   };
 
@@ -66,7 +89,9 @@ function ERPAppContent() {
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         <PortalNavigation />
         <main className="min-w-0 flex-1 overflow-y-auto bg-slate-950/80 p-3 sm:p-6 lg:p-8">
-          <div className="mx-auto w-full max-w-7xl min-w-0">{renderPortalView()}</div>
+          <div className="mx-auto w-full max-w-7xl min-w-0">
+            {renderPortalView()}
+          </div>
         </main>
       </div>
       <SecurityTestSuiteModal />
