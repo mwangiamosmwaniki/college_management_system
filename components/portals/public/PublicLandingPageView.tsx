@@ -25,7 +25,9 @@ import {
   ExternalLink,
   ChevronDown,
   Info,
-  DollarSign
+  DollarSign,
+  Menu,
+  X
 } from 'lucide-react';
 import { useERP } from '@/context/erp-context';
 import { PublicProgrammeItem, KenyanQualificationLevel, KenyanExaminingBody } from '@/types/erp';
@@ -36,6 +38,7 @@ export default function PublicLandingPageView() {
 
   // Navigation tabs within Public Portal
   const [activeSection, setActiveSection] = useState<'home' | 'programmes' | 'admissions' | 'news' | 'downloads' | 'contact'>('home');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   // Programme Filtering State
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,7 +81,12 @@ export default function PublicLandingPageView() {
   }, [newsCategory]);
 
   const handleApplyForProgramme = (prog?: PublicProgrammeItem) => {
-    navigateToPortal('APPLICANT');
+    window.location.assign('/applicant');
+  };
+
+  const handleSectionChange = (section: typeof activeSection) => {
+    setActiveSection(section);
+    setIsMobileNavOpen(false);
   };
 
   const handleDownloadProspectus = () => {
@@ -108,33 +116,33 @@ export default function PublicLandingPageView() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-16">
       {/* 1. Public Top Navigation Bar */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+          <div className="flex min-h-16 items-center justify-between gap-3 py-2 sm:min-h-20 sm:py-0">
             {/* College Crest & Identity */}
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveSection('home')}>
-              <div className="w-12 h-12 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-bold text-xl shadow-md border-2 border-emerald-500">
+            <button className="flex min-w-0 items-center gap-2.5 text-left sm:gap-3" onClick={() => handleSectionChange('home')}>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-emerald-500 bg-emerald-700 text-lg font-bold text-white shadow-md sm:h-12 sm:w-12 sm:text-xl">
                 KT
               </div>
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 block">
-                  Republic of Kenya • TVETA Certified
+              <div className="min-w-0">
+                <span className="hidden text-[10px] font-semibold uppercase tracking-wider text-emerald-700 sm:block sm:text-xs">
+                  Kenya TVETA Certified
                 </span>
-                <h1 className="text-lg font-bold text-slate-900 leading-tight">
+                <h1 className="truncate text-sm font-bold leading-tight text-slate-900 sm:text-lg">
                   {institutionalSettings.name}
                 </h1>
-                <p className="text-xs text-slate-500 hidden sm:block">
+                <p className="hidden text-xs text-slate-500 sm:block">
                   {institutionalSettings.motto}
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+            <nav className="hidden items-center gap-1 lg:flex lg:gap-1.5">
               <button
                 id="pub_nav_home"
                 onClick={() => setActiveSection('home')}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   activeSection === 'home'
                     ? 'bg-emerald-50 text-emerald-700 font-semibold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -151,45 +159,45 @@ export default function PublicLandingPageView() {
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                Courses & Programmes
+                Courses
               </button>
               <button
                 id="pub_nav_admissions"
                 onClick={() => setActiveSection('admissions')}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   activeSection === 'admissions'
                     ? 'bg-emerald-50 text-emerald-700 font-semibold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                Admissions Guide
+                Admissions
               </button>
               <button
                 id="pub_nav_news"
                 onClick={() => setActiveSection('news')}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   activeSection === 'news'
                     ? 'bg-emerald-50 text-emerald-700 font-semibold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                News & Notices
+                News
               </button>
               <button
                 id="pub_nav_downloads"
                 onClick={() => setActiveSection('downloads')}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   activeSection === 'downloads'
                     ? 'bg-emerald-50 text-emerald-700 font-semibold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                Downloads
+                Resources
               </button>
               <button
                 id="pub_nav_contact"
                 onClick={() => setActiveSection('contact')}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   activeSection === 'contact'
                     ? 'bg-emerald-50 text-emerald-700 font-semibold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -200,26 +208,54 @@ export default function PublicLandingPageView() {
             </nav>
 
             {/* Quick Action Buttons */}
-            <div className="flex items-center gap-3">
-              <button
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <a
                 id="btn_pub_apply_header"
-                onClick={() => handleApplyForProgramme()}
-                className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm flex items-center gap-2 transition-all"
+                href="/applicant"
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-2.5 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 sm:px-3.5 sm:text-sm"
               >
-                <UserPlus className="w-4 h-4" />
-                <span>Apply Online</span>
-              </button>
+                <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline sm:inline">Apply</span>
+              </a>
+
+              <a
+                id="btn_pub_login_portal"
+                href="/app"
+                className="hidden items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 sm:flex sm:px-3.5 sm:text-sm"
+              >
+                <GraduationCap className="h-3.5 w-3.5 text-emerald-700 sm:h-4 sm:w-4" />
+                <span>Login</span>
+              </a>
 
               <button
-                id="btn_pub_login_portal"
-                onClick={() => navigateToPortal('STUDENT')}
-                className="px-3.5 py-2 text-sm font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 hidden sm:flex items-center gap-1.5 transition-colors"
+                type="button"
+                aria-label={isMobileNavOpen ? 'Close navigation' : 'Open navigation'}
+                onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+                className="rounded-lg border border-slate-300 p-2 text-slate-700 transition-colors hover:bg-slate-100 lg:hidden"
               >
-                <GraduationCap className="w-4 h-4 text-emerald-700" />
-                <span>Student Portal</span>
+                {isMobileNavOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
               </button>
             </div>
           </div>
+
+          <nav className={`${isMobileNavOpen ? 'flex' : 'hidden'} flex-col gap-1 border-t border-slate-100 py-2 lg:hidden`}>
+            {[
+              ['home', 'Home'],
+              ['programmes', 'Courses'],
+              ['admissions', 'Admissions'],
+              ['news', 'News'],
+              ['downloads', 'Resources'],
+              ['contact', 'Contact']
+            ].map(([section, label]) => (
+              <button
+                key={section}
+                onClick={() => handleSectionChange(section as typeof activeSection)}
+                className={`rounded-lg px-3 py-2 text-left text-sm font-medium ${activeSection === section ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
         </div>
       </header>
 
