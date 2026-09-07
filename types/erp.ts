@@ -1133,10 +1133,75 @@ export interface CrudTestCaseResult {
 
 export type LetterheadHeaderStyle = 'CLASSIC_CREST' | 'MODERN_BANNER' | 'MINIMAL_EXECUTIVE' | 'FORMAL_SEAL';
 
+export interface CampusBranch {
+  id: string;
+  name: string;
+  code: string;
+  type: 'MAIN_CAMPUS' | 'SATELLITE_CAMPUS' | 'TOWN_CENTER' | 'ANNEX_WORKSHOP' | 'VIRTUAL_ODEL';
+  county: string;
+  address: string;
+  directorName: string;
+  phone: string;
+  email: string;
+  studentCapacity: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  establishedDate?: string;
+}
+
+export interface AcademicDepartment {
+  id: string;
+  code: string;
+  name: string;
+  faculty: string;
+  hodName: string;
+  hodEmail: string;
+  phone: string;
+  officeLocation: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  programmesCount?: number;
+}
+
+export interface AcademicTermSession {
+  id: string;
+  academicYear: string;
+  termName: string;
+  intakeName: string;
+  startDate: string;
+  endDate: string;
+  registrationDeadline: string;
+  examStartDate: string;
+  examEndDate: string;
+  isCurrentActive: boolean;
+  status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+}
+
+export interface SchoolPaymentAccount {
+  id: string;
+  label: string;
+  bankOrProvider: string;
+  accountNumber: string;
+  accountName: string;
+  branch?: string;
+  paybillOrTill?: string;
+  purpose: 'TUITION_FEES' | 'EXAMINATION_FEES' | 'ACCOMMODATION' | 'APPLICATION_FEE' | 'CAPITATION_DEVELOPMENT' | 'GENERAL';
+  status: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface InstitutionalGradeScale {
+  id: string;
+  grade: string;
+  minScore: number;
+  maxScore: number;
+  gradePoint: number;
+  classification: string;
+  description: string;
+}
+
 export interface InstitutionalSettings {
   name: string;
   shortName: string;
   code: string;
+  institutionCode?: string;
   motto: string;
   logoUrl: string;
   crestType: 'classic' | 'modern' | 'shield' | 'university' | 'tech';
@@ -1152,12 +1217,25 @@ export interface InstitutionalSettings {
   altPhone?: string;
   email: string;
   admissionEmail?: string;
+  bursaryEmail?: string;
   website: string;
   accreditationBody: string;
   charterNumber: string;
-  establishedYear: string;
+  establishedYear: string | number;
+  // Extended institutional identity & governance details
+  category?: string;
+  institutionCategory?: string;
+  tvetaLicenseNumber?: string;
+  knecCenterNumber?: string;
+  kraPinNumber?: string;
+  missionStatement?: string;
+  visionStatement?: string;
+  coreValues?: string[];
   viceChancellorName: string;
   viceChancellorTitle: string;
+  deputyPrincipalAcademics?: string;
+  deputyPrincipalAdmin?: string;
+  deanOfStudents?: string;
   registrarName: string;
   registrarTitle: string;
   registrarSignatureUrl: string;
@@ -1172,6 +1250,12 @@ export interface InstitutionalSettings {
   enableQrValidation: boolean;
   enableDigitalSignatures: boolean;
   enableEmbossedSeal: boolean;
+  // Dynamic collections with full CRUD operations
+  campuses?: CampusBranch[];
+  departments?: AcademicDepartment[];
+  academicTerms?: AcademicTermSession[];
+  paymentAccounts?: SchoolPaymentAccount[];
+  gradeScales?: InstitutionalGradeScale[];
 }
 
 export type InstitutionalDocType = 

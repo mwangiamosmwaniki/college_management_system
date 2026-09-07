@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import {
   UserIdentity,
   PortalId,
@@ -154,6 +154,21 @@ interface ERPContextType {
   isHealthModalOpen: boolean;
   setIsHealthModalOpen: (open: boolean) => void;
 
+  // Responsive Layout States
+  isSidebarCollapsed: boolean;
+  setIsSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapse: () => void;
+  isMobileSidebarOpen: boolean;
+  setIsMobileSidebarOpen: (open: boolean) => void;
+  toggleMobileSidebar: () => void;
+
+  // Unified Authentication
+  isLoginModalOpen: boolean;
+  setIsLoginModalOpen: (open: boolean) => void;
+  loginTargetPortal: PortalId | 'STAFF' | null;
+  openLoginModal: (target?: PortalId | 'STAFF') => void;
+  logout: () => void;
+
   // Interactive Actions
   switchUserPersona: (userId: string) => void;
   navigateToPortal: (portalId: PortalId, defaultTab?: string) => boolean;
@@ -214,8 +229,29 @@ interface ERPContextType {
 const ERPContext = createContext<ERPContextType | undefined>(undefined);
 
 export function ERPProvider({ children }: { children: ReactNode }) {
-  // Institutional Settings State
-  const [institutionalSettings, setInstitutionalSettings] = useState<InstitutionalSettings>(DEFAULT_INSTITUTIONAL_SETTINGS);
+  // Institutional Settings State with LocalStorage synchronization
+  const [institutionalSettings, setInstitutionalSettings] = useState<InstitutionalSettings>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('ktvtc_institutional_settings');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return {
+            ...DEFAULT_INSTITUTIONAL_SETTINGS,
+            ...parsed,
+            campuses: parsed.campuses?.length ? parsed.campuses : DEFAULT_INSTITUTIONAL_SETTINGS.campuses,
+            departments: parsed.departments?.length ? parsed.departments : DEFAULT_INSTITUTIONAL_SETTINGS.departments,
+            academicTerms: parsed.academicTerms?.length ? parsed.academicTerms : DEFAULT_INSTITUTIONAL_SETTINGS.academicTerms,
+            paymentAccounts: parsed.paymentAccounts?.length ? parsed.paymentAccounts : DEFAULT_INSTITUTIONAL_SETTINGS.paymentAccounts,
+            gradeScales: parsed.gradeScales?.length ? parsed.gradeScales : DEFAULT_INSTITUTIONAL_SETTINGS.gradeScales,
+          };
+        }
+      } catch (e) {
+        console.error('Failed to load institutional settings from localStorage', e);
+      }
+    }
+    return DEFAULT_INSTITUTIONAL_SETTINGS;
+  });
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [activeDocPayload, setActiveDocPayload] = useState<InstitutionalDocPayload | null>(null);
 
@@ -224,8 +260,26 @@ export function ERPProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<RoleDefinition[]>(INITIAL_ROLES);
   const [users, setUsers] = useState<UserIdentity[]>(INITIAL_USERS);
   const [currentUser, setCurrentUser] = useState<UserIdentity>(INITIAL_USERS[0]); // John Doe by default
-  const [activePortalId, setActivePortalId] = useState<PortalId>('STUDENT');
+  const [activePortalId, setActivePortalId] = useState<PortalId>('PUBLIC');
   const [activeNavTab, setActiveNavTab] = useState<string>('dashboard');
+
+  // Responsive Layout States
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const toggleSidebarCollapse = () => setIsSidebarCollapsed(prev => !prev);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const toggleMobileSidebar = () => setIsMobileSidebarOpen(prev => !prev);
+
+  // Unified Authentication Modal State
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginTargetPortal, setLoginTargetPortal] = useState<PortalId | 'STAFF' | null>(null);
+  const openLoginModal = (target?: PortalId | 'STAFF') => {
+    setLoginTargetPortal(target || null);
+    setIsLoginModalOpen(true);
+  };
+  const logout = () => {
+    setActivePortalId('PUBLIC');
+    setIsMobileSidebarOpen(false);
+  };
 
   // Domain data
   const [studentProfile] = useState<StudentProfileData>(MOCK_STUDENT_PROFILE);
@@ -299,6 +353,7 @@ export function ERPProvider({ children }: { children: ReactNode }) {
   };
 
   const navigateToPortal = (portalId: PortalId, defaultTab: string = 'dashboard'): boolean => {
+    setIsMobileSidebarOpen(false);
     const access = evaluatePortalAccess(currentUser, portalId, roles);
     if (access.allowed) {
       setActivePortalId(portalId);
@@ -861,6 +916,11 @@ export function ERPProvider({ children }: { children: ReactNode }) {
   const updateInstitutionalSettings = (settingsUpdate: Partial<InstitutionalSettings>) => {
     setInstitutionalSettings(prev => {
       const next = { ...prev, ...settingsUpdate };
+      try {
+        localStorage.setItem('ktvtc_institutional_settings', JSON.stringify(next));
+      } catch (e) {
+        console.error('Failed to persist institutional settings to localStorage', e);
+      }
       return next;
     });
 
@@ -874,6 +934,11 @@ export function ERPProvider({ children }: { children: ReactNode }) {
   };
 
   const resetInstitutionalSettings = () => {
+    try {
+      localStorage.removeItem('ktvtc_institutional_settings');
+    } catch (e) {
+      console.error('Failed to remove institutional settings from localStorage', e);
+    }
     setInstitutionalSettings(DEFAULT_INSTITUTIONAL_SETTINGS);
     setCurrentUser(prev => ({ ...prev, institution: DEFAULT_INSTITUTIONAL_SETTINGS.name }));
     setUsers(prev => prev.map(u => ({ ...u, institution: DEFAULT_INSTITUTIONAL_SETTINGS.name })));
@@ -1487,7 +1552,18 @@ export function ERPProvider({ children }: { children: ReactNode }) {
       assignPortalRole,
       revokeUserRole,
       revokePortalRole,
-      togglePortalStatus
+      togglePortalStatus,
+      isSidebarCollapsed,
+      setIsSidebarCollapsed,
+      toggleSidebarCollapse,
+      isMobileSidebarOpen,
+      setIsMobileSidebarOpen,
+      toggleMobileSidebar,
+      isLoginModalOpen,
+      setIsLoginModalOpen,
+      loginTargetPortal,
+      openLoginModal,
+      logout
     }),
     [
       currentUser,
@@ -1522,7 +1598,11 @@ export function ERPProvider({ children }: { children: ReactNode }) {
       isHealthModalOpen,
       isCrudLifecycleSuiteOpen,
       crudEntities,
-      activeCrudEntityType
+      activeCrudEntityType,
+      isSidebarCollapsed,
+      isMobileSidebarOpen,
+      isLoginModalOpen,
+      loginTargetPortal
     ]
   );
 

@@ -39,6 +39,15 @@ export function evaluatePortalAccess(
   portalId: PortalId,
   rolesRegistry: RoleDefinition[]
 ): { allowed: boolean; roleName?: string; assignment?: PortalAssignment; reason: string } {
+  // Public Portal is accessible to everyone
+  if (portalId === 'PUBLIC') {
+    return {
+      allowed: true,
+      roleName: 'Public Visitor',
+      reason: 'Public website and prospectus portal is openly accessible to all.'
+    };
+  }
+
   // Super Admin can access all portals by default, but still operates under administrative audit
   const isSuperAdmin = user.portalAssignments.some(
     a => a.portalId === 'ADMIN' && a.roleId === 'ROLE_SUPER_ADMIN'

@@ -90,8 +90,8 @@ export function DataTable<T>({
         </div>
       )}
 
-      {/* Table Container */}
-      <div className="overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-slate-800 bg-slate-950/60 text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">
@@ -160,6 +160,67 @@ export function DataTable<T>({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card Layout (Prevents horizontal scrolling and improves ergonomics) */}
+      <div className="md:hidden divide-y divide-slate-800/80">
+        {isLoading ? (
+          <div className="p-8 text-center text-slate-400">
+            <div className="inline-flex items-center gap-2 text-xs font-mono">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
+              Loading dataset...
+            </div>
+          </div>
+        ) : data.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title={emptyTitle}
+              description={emptyDescription}
+              actionLabel={emptyActionLabel}
+              onAction={onEmptyAction}
+            />
+          </div>
+        ) : (
+          data.map((row, idx) => {
+            const firstCol = columns[0];
+            const otherCols = columns.slice(1);
+            return (
+              <div
+                key={keyExtractor(row, idx)}
+                onClick={() => onRowClick?.(row)}
+                className={`p-4 transition ${
+                  onRowClick ? 'cursor-pointer active:bg-slate-800/60 hover:bg-slate-800/40' : ''
+                }`}
+              >
+                {/* Mobile Card Header using First Column */}
+                {firstCol && (
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/60">
+                    <div className="font-semibold text-slate-100 text-xs">
+                      {firstCol.render ? firstCol.render(row, idx) : (row as any)[firstCol.key]}
+                    </div>
+                  </div>
+                )}
+
+                {/* Mobile Card Attribute List */}
+                <div className="space-y-1.5">
+                  {otherCols.map((col) => (
+                    <div
+                      key={col.key}
+                      className="flex items-center justify-between gap-3 text-xs"
+                    >
+                      <span className="text-[11px] font-mono text-slate-400 shrink-0">
+                        {col.header}
+                      </span>
+                      <div className="text-right text-slate-200 min-w-0">
+                        {col.render ? col.render(row, idx) : (row as any)[col.key]}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Pagination Footer */}

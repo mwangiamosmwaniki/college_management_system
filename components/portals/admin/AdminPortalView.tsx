@@ -44,6 +44,7 @@ export function AdminPortalView() {
   const {
     currentUser,
     activeNavTab,
+    setActiveNavTab,
     users,
     roles,
     portals,
@@ -254,7 +255,22 @@ export function AdminPortalView() {
           </div>
 
           {/* Quick System Tools */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button
+              onClick={() => setActiveNavTab('settings')}
+              className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/50 transition text-left space-y-2 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white text-sm group-hover:text-amber-400 transition">
+                  School Settings & Details
+                </span>
+                <Building2 className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="text-xs text-slate-400 font-mono">
+                Manage campuses, departments, terms & institutional profiles
+              </div>
+            </button>
+
             <button
               onClick={() => setIsSecuritySuiteOpen(true)}
               className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-emerald-500/50 transition text-left space-y-2 group"
@@ -301,6 +317,13 @@ export function AdminPortalView() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* 1.4. INSTITUTIONAL & SCHOOL SETTINGS MANAGER (FULL CRUD) */}
+      {/* ============================================================= */}
+      {(activeNavTab === 'settings' || activeNavTab === 'institutional_settings' || activeNavTab === 'school_settings') && (
+        <InstitutionalSettingsManager />
       )}
 
       {/* ============================================================= */}

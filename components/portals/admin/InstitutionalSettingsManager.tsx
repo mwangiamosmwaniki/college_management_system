@@ -25,8 +25,16 @@ import {
   HelpCircle,
   FileSpreadsheet,
   Receipt,
-  GraduationCap
+  GraduationCap,
+  Layers,
+  CreditCard,
+  Calendar
 } from 'lucide-react';
+import { SchoolProfileTab } from './settings/SchoolProfileTab';
+import { CampusesTab } from './settings/CampusesTab';
+import { DepartmentsTab } from './settings/DepartmentsTab';
+import { AcademicTermsTab } from './settings/AcademicTermsTab';
+import { PaymentAccountsTab } from './settings/PaymentAccountsTab';
 
 const PRESET_LOGOS = [
   {
@@ -64,9 +72,19 @@ export function InstitutionalSettingsManager() {
   } = useERP();
 
   const [formData, setFormData] = useState<InstitutionalSettings>(institutionalSettings);
-  const [activeSection, setActiveSection] = useState<'IDENTITY' | 'CONTACT' | 'SIGNATORIES' | 'LETTERHEAD' | 'PREVIEW'>('IDENTITY');
+  const [activeSection, setActiveSection] = useState<
+    'PROFILE' | 'CAMPUSES' | 'DEPARTMENTS' | 'ACADEMIC_CALENDAR' | 'PAYMENT_ACCOUNTS' | 'SIGNATORIES' | 'CONTACT' | 'LETTERHEAD' | 'PREVIEW'
+  >('PROFILE');
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null);
   const [previewDocType, setPreviewDocType] = useState<'TRANSCRIPT' | 'RECEIPT' | 'ADMISSION_LETTER' | 'BROADSHEET' | 'CLEARANCE_CERTIFICATE'>('TRANSCRIPT');
+
+  const handleDirectUpdate = (updatedPartial: Partial<InstitutionalSettings>, message: string) => {
+    const next = { ...formData, ...updatedPartial };
+    setFormData(next);
+    updateInstitutionalSettings(next);
+    setSavedFeedback(message);
+    setTimeout(() => setSavedFeedback(null), 4000);
+  };
 
   const handleChange = (field: keyof InstitutionalSettings, value: any) => {
     setFormData(prev => ({
@@ -337,224 +355,170 @@ export function InstitutionalSettingsManager() {
       )}
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+      <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs">
         <button
-          onClick={() => setActiveSection('IDENTITY')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer ${
-            activeSection === 'IDENTITY'
+          type="button"
+          onClick={() => setActiveSection('PROFILE')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition cursor-pointer ${
+            activeSection === 'PROFILE'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>1. Identity & Heraldry</span>
+          <span>1. School Profile & Charters</span>
         </button>
 
         <button
-          onClick={() => setActiveSection('CONTACT')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer ${
-            activeSection === 'CONTACT'
+          type="button"
+          onClick={() => setActiveSection('CAMPUSES')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition cursor-pointer ${
+            activeSection === 'CAMPUSES'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
           }`}
         >
           <MapPin className="w-4 h-4" />
-          <span>2. Location & Contact Info</span>
+          <span>2. Campuses & Branches</span>
         </button>
 
         <button
+          type="button"
+          onClick={() => setActiveSection('DEPARTMENTS')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition cursor-pointer ${
+            activeSection === 'DEPARTMENTS'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>3. Academic Departments</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection('ACADEMIC_CALENDAR')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition cursor-pointer ${
+            activeSection === 'ACADEMIC_CALENDAR'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          <span>4. Calendar & Terms</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection('PAYMENT_ACCOUNTS')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition cursor-pointer ${
+            activeSection === 'PAYMENT_ACCOUNTS'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span>5. Bank & Paybill A/Cs</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveSection('SIGNATORIES')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition cursor-pointer ${
             activeSection === 'SIGNATORIES'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
           }`}
         >
           <UserCheck className="w-4 h-4" />
-          <span>3. Executive Signatories</span>
+          <span>6. Executive Signatories</span>
         </button>
 
         <button
+          type="button"
+          onClick={() => setActiveSection('CONTACT')}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition cursor-pointer ${
+            activeSection === 'CONTACT'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Phone className="w-4 h-4" />
+          <span>7. Location & Contact</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveSection('LETTERHEAD')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition cursor-pointer ${
             activeSection === 'LETTERHEAD'
               ? 'bg-blue-600 text-white shadow-sm'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
           }`}
         >
           <Palette className="w-4 h-4" />
-          <span>4. Letterhead Styling & Security</span>
+          <span>8. Letterhead Styling</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveSection('PREVIEW')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold transition cursor-pointer ${
             activeSection === 'PREVIEW'
               ? 'bg-purple-600 text-white shadow-sm'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>5. Live Document Sampler</span>
+          <span>9. Live Document Sampler</span>
         </button>
       </div>
 
-      {/* Main Form Content */}
-      <form onSubmit={handleSave} className="space-y-6">
-        
-        {/* =========================================================================
-            SECTION 1: IDENTITY & HERALDRY
-            ========================================================================= */}
-        {activeSection === 'IDENTITY' && (
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-6">
-            <div className="border-b border-slate-800 pb-4">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-blue-400" />
-                Institutional Name, Heraldic Crest & Statutory Charters
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                These core identity properties appear on the top header of all generated letters, transcripts, and certificates.
-              </p>
-            </div>
+      {/* 1. Profile & Charters Section */}
+      {activeSection === 'PROFILE' && (
+        <SchoolProfileTab
+          settings={formData}
+          onUpdate={handleDirectUpdate}
+          presetLogos={PRESET_LOGOS}
+          onApplyPreset={handleApplyPreset}
+        />
+      )}
 
-            {/* Quick Logo Presets */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Quick Preset Themes & University Crests
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {PRESET_LOGOS.map(preset => (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => handleApplyPreset(preset)}
-                    className="p-3 rounded-xl bg-slate-850 border border-slate-700 hover:border-blue-500 transition text-left flex items-center gap-3 cursor-pointer group"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={preset.url}
-                      alt={preset.name}
-                      className="w-10 h-10 object-contain rounded-lg bg-white p-1 border border-slate-600"
-                    />
-                    <div className="text-xs">
-                      <p className="font-semibold text-white group-hover:text-blue-400 transition">{preset.name}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: preset.primary }} />
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: preset.accent }} />
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* 2. Campuses & Branches CRUD Section */}
+      {activeSection === 'CAMPUSES' && (
+        <CampusesTab
+          settings={formData}
+          onUpdate={handleDirectUpdate}
+        />
+      )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs">
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300">Full Institutional Legal Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={e => handleChange('name', e.target.value)}
-                  placeholder="e.g. Apex Institute of Technology"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
-                />
-                <p className="text-[11px] text-slate-500">Displayed in large display font on letterhead header.</p>
-              </div>
+      {/* 3. Academic Departments CRUD Section */}
+      {activeSection === 'DEPARTMENTS' && (
+        <DepartmentsTab
+          settings={formData}
+          onUpdate={handleDirectUpdate}
+        />
+      )}
 
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300">Short Name / Acronym *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.shortName}
-                  onChange={e => handleChange('shortName', e.target.value)}
-                  placeholder="e.g. APEX TECH"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
-                />
-                <p className="text-[11px] text-slate-500">Used in badges, receipts, and system navigation bar.</p>
-              </div>
+      {/* 4. Academic Calendar & Sessions CRUD Section */}
+      {activeSection === 'ACADEMIC_CALENDAR' && (
+        <AcademicTermsTab
+          settings={formData}
+          onUpdate={handleDirectUpdate}
+        />
+      )}
 
-              <div className="sm:col-span-2 space-y-1.5">
-                <label className="font-semibold text-slate-300">Institutional Motto / Slogan</label>
-                <input
-                  type="text"
-                  value={formData.motto}
-                  onChange={e => handleChange('motto', e.target.value)}
-                  placeholder="e.g. Excellence in Innovation, Science, Technology & Integrity"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
-                />
-                <p className="text-[11px] text-slate-500">Rendered in italics directly under the university name.</p>
-              </div>
+      {/* 5. Bank & Payment Accounts CRUD Section */}
+      {activeSection === 'PAYMENT_ACCOUNTS' && (
+        <PaymentAccountsTab
+          settings={formData}
+          onUpdate={handleDirectUpdate}
+        />
+      )}
 
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300">Logo / Heraldic Crest Image URL</label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={formData.logoUrl}
-                    onChange={e => handleChange('logoUrl', e.target.value)}
-                    placeholder="https://..."
-                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
-                  />
-                  {formData.logoUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={formData.logoUrl}
-                      alt="Logo Preview"
-                      className="w-10 h-10 rounded-lg object-contain bg-white p-1 border border-slate-600"
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300">Statutory Institutional Code</label>
-                <input
-                  type="text"
-                  value={formData.code}
-                  onChange={e => handleChange('code', e.target.value)}
-                  placeholder="e.g. AIT-UNIVERSITAS"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300">Charter & Registration Number</label>
-                <input
-                  type="text"
-                  value={formData.charterNumber}
-                  onChange={e => handleChange('charterNumber', e.target.value)}
-                  placeholder="e.g. HEAC/REG/2012/094-UNIV"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-300">Established Year</label>
-                <input
-                  type="text"
-                  value={formData.establishedYear}
-                  onChange={e => handleChange('establishedYear', e.target.value)}
-                  placeholder="e.g. 1984"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="sm:col-span-2 space-y-1.5">
-                <label className="font-semibold text-slate-300">Accreditation & Statutory Bodies</label>
-                <input
-                  type="text"
-                  value={formData.accreditationBody}
-                  onChange={e => handleChange('accreditationBody', e.target.value)}
-                  placeholder="e.g. Chartered by Higher Education Accreditation Commission (HEAC) • ABET & NUC Certified"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Main Form Content for CONTACT, SIGNATORIES, LETTERHEAD, PREVIEW */}
+      {['CONTACT', 'SIGNATORIES', 'LETTERHEAD', 'PREVIEW'].includes(activeSection) && (
+        <form onSubmit={handleSave} className="space-y-6">
 
         {/* =========================================================================
             SECTION 2: LOCATION & CONTACT INFO
@@ -1156,6 +1120,7 @@ export function InstitutionalSettingsManager() {
         </div>
 
       </form>
+      )}
     </div>
   );
 }

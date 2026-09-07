@@ -1490,7 +1490,7 @@ export const DEFAULT_INSTITUTIONAL_SETTINGS: InstitutionalSettings = {
   secondaryColor: '#0f172a', // Slate 900
   accentColor: '#d97706', // Amber gold
   addressLine1: 'Nairobi Main Campus, Off Ngong Road',
-  addressLine2: 'Administration & Registry Complex',
+  addressLine2: 'Administration & Registry Complex, Block A',
   city: 'Nairobi',
   stateCountry: 'Nairobi County, Kenya',
   postalCode: 'P.O. Box 45321 - 00100',
@@ -1498,17 +1498,34 @@ export const DEFAULT_INSTITUTIONAL_SETTINGS: InstitutionalSettings = {
   altPhone: '+254 712 345 678',
   email: 'info@ktvtc.ac.ke',
   admissionEmail: 'admissions@ktvtc.ac.ke',
+  bursaryEmail: 'finance@ktvtc.ac.ke',
   website: 'https://www.ktvtc.ac.ke',
-  accreditationBody: 'Technical and Vocational Education and Training Authority (TVETA) • KNEC Exam Centre #20401102',
+  accreditationBody: 'Technical and Vocational Education and Training Authority (TVETA) • KNEC Examination Centre #20401102',
   charterNumber: 'TVETA/REG/2020/0248',
   establishedYear: '1982',
+  category: 'National Polytechnic / TVET College',
+  tvetaLicenseNumber: 'TVETA/REG/2020/0248',
+  knecCenterNumber: '20401102',
+  kraPinNumber: 'P051289431Z',
+  missionStatement: 'To provide high-quality, competency-based education and hands-on technological skills that drive industrial transformation, entrepreneurship, and sustainable socio-economic development.',
+  visionStatement: 'A premier world-class technical and vocational institution recognized globally for innovation, research, and industry-ready graduates.',
+  coreValues: [
+    'Integrity & Transparency',
+    'Competency-Based Excellence (CBET)',
+    'Technological Innovation',
+    'Equity, Inclusivity & Trainee Welfare',
+    'Environmental Stewardship'
+  ],
   viceChancellorName: 'Dr. Josephat K. Cheruiyot, Ph.D, Eng.',
   viceChancellorTitle: 'Principal & Chief Executive Officer',
+  deputyPrincipalAcademics: 'Eng. Francisca K. Mutua, M.Sc.',
+  deputyPrincipalAdmin: 'Mr. Benson O. Anyango, MBA, CPA-K',
+  deanOfStudents: 'Dr. Esther N. Wambugu, M.Ed',
   registrarName: 'Mrs. Grace W. Mwangi, M.Ed',
   registrarTitle: 'Registrar (Academic Affairs)',
   registrarSignatureUrl: 'https://picsum.photos/seed/sigreg/240/80',
   bursarName: 'Mr. David O. Omondi, CPA-K',
-  bursarTitle: 'University Bursar & Head of Finance',
+  bursarTitle: 'College Bursar & Head of Finance',
   bursarSignatureUrl: 'https://picsum.photos/seed/sigbur/240/80',
   officialSealUrl: 'https://picsum.photos/seed/sealuniv/150/150',
   letterheadHeaderStyle: 'CLASSIC_CREST',
@@ -1517,7 +1534,307 @@ export const DEFAULT_INSTITUTIONAL_SETTINGS: InstitutionalSettings = {
   securityVerificationUrl: 'https://ktvtc.ac.ke/verify/sec-doc',
   enableQrValidation: true,
   enableDigitalSignatures: true,
-  enableEmbossedSeal: true
+  enableEmbossedSeal: true,
+  campuses: [
+    {
+      id: 'camp_main',
+      name: 'Nairobi Main Campus',
+      code: 'CAMP-MAIN',
+      type: 'MAIN_CAMPUS',
+      county: 'Nairobi',
+      address: 'Off Ngong Road, Dagoretti Corner, Nairobi',
+      directorName: 'Eng. David Kiprono',
+      phone: '+254 (0) 20 271 8900',
+      email: 'maincampus@ktvtc.ac.ke',
+      studentCapacity: 4500,
+      status: 'ACTIVE',
+      establishedDate: '1982-05-15'
+    },
+    {
+      id: 'camp_cbd',
+      name: 'Nairobi CBD Town Campus & Evening Annex',
+      code: 'CAMP-CBD',
+      type: 'TOWN_CENTER',
+      county: 'Nairobi',
+      address: 'Moi Avenue, Commercial Hub Building 4th Floor',
+      directorName: 'Dr. Beatrice Akinyi',
+      phone: '+254 722 990 112',
+      email: 'towncenter@ktvtc.ac.ke',
+      studentCapacity: 1200,
+      status: 'ACTIVE',
+      establishedDate: '2012-09-01'
+    },
+    {
+      id: 'camp_mach',
+      name: 'Machakos Industrial & Heavy Workshop Annex',
+      code: 'CAMP-MACH',
+      type: 'ANNEX_WORKSHOP',
+      county: 'Machakos',
+      address: 'Mavoko Industrial Zone, Plot 44B, Athi River',
+      directorName: 'Mr. Patrick Mutua',
+      phone: '+254 733 445 566',
+      email: 'machakos@ktvtc.ac.ke',
+      studentCapacity: 1800,
+      status: 'ACTIVE',
+      establishedDate: '2018-02-10'
+    },
+    {
+      id: 'camp_odel',
+      name: 'Virtual Campus & Open Distance Learning (ODeL)',
+      code: 'CAMP-ODEL',
+      type: 'VIRTUAL_ODEL',
+      county: 'Nationwide & Global',
+      address: 'Cloud Learning Center, e-Campus Portal System',
+      directorName: 'Prof. Amara Diallo',
+      phone: '+254 711 889 900',
+      email: 'odel@ktvtc.ac.ke',
+      studentCapacity: 10000,
+      status: 'ACTIVE',
+      establishedDate: '2020-03-20'
+    }
+  ],
+  departments: [
+    {
+      id: 'dept_ict',
+      code: 'DEPT-ICT',
+      name: 'Computer Studies & Information Technology',
+      faculty: 'Faculty of Computing & Information Systems',
+      hodName: 'Dr. Arthur Vance',
+      hodEmail: 'hod.ict@ktvtc.ac.ke',
+      phone: '+254 720 112 233',
+      officeLocation: 'ICT Complex, Room 204',
+      status: 'ACTIVE',
+      programmesCount: 8
+    },
+    {
+      id: 'dept_eee',
+      code: 'DEPT-EEE',
+      name: 'Electrical & Electronics Engineering',
+      faculty: 'Faculty of Engineering & Technology',
+      hodName: 'Eng. Florence Chebet',
+      hodEmail: 'hod.eee@ktvtc.ac.ke',
+      phone: '+254 721 334 455',
+      officeLocation: 'Power Systems Lab B-12',
+      status: 'ACTIVE',
+      programmesCount: 6
+    },
+    {
+      id: 'dept_mech',
+      code: 'DEPT-MECH',
+      name: 'Mechanical & Automotive Engineering',
+      faculty: 'Faculty of Engineering & Technology',
+      hodName: 'Mr. Jackson Kariuki',
+      hodEmail: 'hod.mech@ktvtc.ac.ke',
+      phone: '+254 722 556 677',
+      officeLocation: 'Heavy Machinery Workshop 1',
+      status: 'ACTIVE',
+      programmesCount: 7
+    },
+    {
+      id: 'dept_civil',
+      code: 'DEPT-CIVIL',
+      name: 'Building, Civil Engineering & Surveying',
+      faculty: 'Faculty of Built Environment',
+      hodName: 'Arch. Samuel Omondi',
+      hodEmail: 'hod.civil@ktvtc.ac.ke',
+      phone: '+254 723 778 899',
+      officeLocation: 'Civil Drafting Studio 301',
+      status: 'ACTIVE',
+      programmesCount: 5
+    },
+    {
+      id: 'dept_business',
+      code: 'DEPT-BUS',
+      name: 'Business Studies & Management',
+      faculty: 'Faculty of Business & Social Sciences',
+      hodName: 'Mrs. Christine Mutiso, CPA',
+      hodEmail: 'hod.business@ktvtc.ac.ke',
+      phone: '+254 724 990 011',
+      officeLocation: 'Management Wing Room 108',
+      status: 'ACTIVE',
+      programmesCount: 9
+    },
+    {
+      id: 'dept_hosp',
+      code: 'DEPT-HOSP',
+      name: 'Hospitality & Institutional Management',
+      faculty: 'Faculty of Hospitality & Tourism',
+      hodName: 'Chef Rosemary Wanjiku',
+      hodEmail: 'hod.hospitality@ktvtc.ac.ke',
+      phone: '+254 725 123 456',
+      officeLocation: 'Culinary Training Kitchen 2',
+      status: 'ACTIVE',
+      programmesCount: 4
+    },
+    {
+      id: 'dept_applied',
+      code: 'DEPT-APPL',
+      name: 'Applied Sciences & Medical Laboratory',
+      faculty: 'Faculty of Science & Health Technology',
+      hodName: 'Dr. Evans Nyongesa',
+      hodEmail: 'hod.health@ktvtc.ac.ke',
+      phone: '+254 726 234 567',
+      officeLocation: 'Clinical Diagnostic Lab 2',
+      status: 'ACTIVE',
+      programmesCount: 5
+    },
+    {
+      id: 'dept_agri',
+      code: 'DEPT-AGRI',
+      name: 'Agriculture & Environmental Technology',
+      faculty: 'Faculty of Agricultural Sciences',
+      hodName: 'Dr. Mercy Rotich',
+      hodEmail: 'hod.agri@ktvtc.ac.ke',
+      phone: '+254 727 345 678',
+      officeLocation: 'Greenhouse & Farm Innovation Hub',
+      status: 'ACTIVE',
+      programmesCount: 4
+    }
+  ],
+  academicTerms: [
+    {
+      id: 'term_2026_01',
+      academicYear: '2026/2027',
+      termName: 'Term 1 (First Semester)',
+      intakeName: 'September 2026 Intake',
+      startDate: '2026-09-01',
+      endDate: '2026-11-28',
+      registrationDeadline: '2026-09-20',
+      examStartDate: '2026-11-16',
+      examEndDate: '2026-11-27',
+      isCurrentActive: true,
+      status: 'ACTIVE'
+    },
+    {
+      id: 'term_2026_02',
+      academicYear: '2026/2027',
+      termName: 'Term 2 (Second Semester)',
+      intakeName: 'January 2027 Intake',
+      startDate: '2027-01-05',
+      endDate: '2027-04-03',
+      registrationDeadline: '2027-01-25',
+      examStartDate: '2027-03-22',
+      examEndDate: '2027-04-02',
+      isCurrentActive: false,
+      status: 'UPCOMING'
+    },
+    {
+      id: 'term_2026_03',
+      academicYear: '2026/2027',
+      termName: 'Term 3 (Third Semester)',
+      intakeName: 'May 2027 Intake',
+      startDate: '2027-05-04',
+      endDate: '2027-07-31',
+      registrationDeadline: '2027-05-20',
+      examStartDate: '2027-07-19',
+      examEndDate: '2027-07-30',
+      isCurrentActive: false,
+      status: 'UPCOMING'
+    },
+    {
+      id: 'term_2025_03',
+      academicYear: '2025/2026',
+      termName: 'Term 3 (Third Semester)',
+      intakeName: 'May 2026 Intake',
+      startDate: '2026-05-05',
+      endDate: '2026-07-31',
+      registrationDeadline: '2026-05-22',
+      examStartDate: '2026-07-18',
+      examEndDate: '2026-07-29',
+      isCurrentActive: false,
+      status: 'COMPLETED'
+    }
+  ],
+  paymentAccounts: [
+    {
+      id: 'acc_kcb_tuition',
+      label: 'KCB Tuition Fees Collection A/C',
+      bankOrProvider: 'Kenya Commercial Bank (KCB)',
+      accountNumber: '1102938475',
+      accountName: 'Kenya TVET College Operations',
+      branch: 'Kipande House Branch, Nairobi',
+      purpose: 'TUITION_FEES',
+      status: 'ACTIVE'
+    },
+    {
+      id: 'acc_equity_exams',
+      label: 'Equity Bank Examination Board A/C',
+      bankOrProvider: 'Equity Bank Kenya',
+      accountNumber: '0810293847561',
+      accountName: 'Kenya TVET College Exam Centre',
+      branch: 'Community Branch, Nairobi',
+      purpose: 'EXAMINATION_FEES',
+      status: 'ACTIVE'
+    },
+    {
+      id: 'acc_coop_hostel',
+      label: 'Co-op Bank Accommodation & Welfare A/C',
+      bankOrProvider: 'Co-operative Bank of Kenya',
+      accountNumber: '01129384756000',
+      accountName: 'Kenya TVET College Residential Services',
+      branch: 'Upper Hill Branch',
+      purpose: 'ACCOMMODATION',
+      status: 'ACTIVE'
+    },
+    {
+      id: 'acc_mpesa_paybill',
+      label: 'Official Safaricom M-Pesa Paybill',
+      bankOrProvider: 'Safaricom M-Pesa',
+      accountNumber: 'Paybill: 247247',
+      accountName: 'Kenya TVET College',
+      paybillOrTill: '247247',
+      branch: 'National M-Pesa Corporate Gateway',
+      purpose: 'GENERAL',
+      status: 'ACTIVE'
+    }
+  ],
+  gradeScales: [
+    {
+      id: 'grd_a',
+      grade: 'A',
+      minScore: 80,
+      maxScore: 100,
+      gradePoint: 4.0,
+      classification: 'Distinction',
+      description: 'Exceptional mastery of CBET/KNEC competencies and technical practicals.'
+    },
+    {
+      id: 'grd_b',
+      grade: 'B',
+      minScore: 65,
+      maxScore: 79,
+      gradePoint: 3.0,
+      classification: 'Credit',
+      description: 'Commendable competency with strong practical demonstration.'
+    },
+    {
+      id: 'grd_c',
+      grade: 'C',
+      minScore: 50,
+      maxScore: 64,
+      gradePoint: 2.0,
+      classification: 'Pass',
+      description: 'Satisfactory achievement of prescribed minimum course standards.'
+    },
+    {
+      id: 'grd_d',
+      grade: 'D',
+      minScore: 40,
+      maxScore: 49,
+      gradePoint: 1.0,
+      classification: 'Referral / Re-sit',
+      description: 'Marginal performance; supplementary assessment recommended.'
+    },
+    {
+      id: 'grd_e',
+      grade: 'E',
+      minScore: 0,
+      maxScore: 39,
+      gradePoint: 0.0,
+      classification: 'Fail / Repeat',
+      description: 'Inadequate competence; repeat of module/unit prescribed.'
+    }
+  ]
 };
 
 
