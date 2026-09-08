@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "InstitutionSettings": {
+      "title": "InstitutionSettings",
+      "description": "Enterprise configuration and heraldry settings for the institution",
+      "type": "object",
+      "properties": {
+        "institutionId": { "type": "string" },
+        "name": { "type": "string" },
+        "shortName": { "type": "string" },
+        "motto": { "type": "string" },
+        "themePrimaryColor": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["institutionId", "name", "shortName"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile with role mappings and credentials metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "identifier": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "department": { "type": "string" },
+        "campus": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED", "GRADUATED", "ON_LEAVE"] },
+        "institutionId": { "type": "string" }
+      },
+      "required": ["id", "identifier", "name", "email", "status"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable server-side audit trace for security and compliance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "userId": { "type": "string" },
+        "userIdentifier": { "type": "string" },
+        "portalId": { "type": "string" },
+        "roleName": { "type": "string" },
+        "action": { "type": "string" },
+        "resource": { "type": "string" },
+        "status": { "type": "string", "enum": ["GRANTED", "DENIED", "FLAGGED"] },
+        "details": { "type": "string" },
+        "actorId": { "type": "string" },
+        "institutionId": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "userId", "action", "resource", "status"]
+    },
+    "AcademicTerm": {
+      "title": "AcademicTerm",
+      "description": "Academic year and term configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "termName": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "UPCOMING", "COMPLETED"] },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" }
+      },
+      "required": ["id", "academicYear", "termName", "status"]
+    },
+    "StudentApplication": {
+      "title": "StudentApplication",
+      "description": "Applicant admissions profile and document metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ref": { "type": "string" },
+        "fullName": { "type": "string" },
+        "course": { "type": "string" },
+        "status": { "type": "string" },
+        "submittedAt": { "type": "string" }
+      },
+      "required": ["id", "ref", "fullName", "course", "status"]
+    }
+  },
+  "firestore": {
+    "/institutions/{institutionId}/settings/current": {
+      "schema": "InstitutionSettings",
+      "description": "Institutional settings and configuration"
+    },
+    "/institutions/{institutionId}/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and credentials scoped to institution"
+    },
+    "/institutions/{institutionId}/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Immutable security and activity audit records"
+    },
+    "/institutions/{institutionId}/terms/{termId}": {
+      "schema": "AcademicTerm",
+      "description": "Academic sessions and terms"
+    },
+    "/institutions/{institutionId}/applications/{appId}": {
+      "schema": "StudentApplication",
+      "description": "Student admissions applications"
+    }
+  }
+}

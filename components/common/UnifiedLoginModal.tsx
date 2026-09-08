@@ -44,6 +44,7 @@ export function UnifiedLoginModal() {
   const [identifierInput, setIdentifierInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isLoginModalOpen) return null;
 
@@ -55,44 +56,60 @@ export function UnifiedLoginModal() {
   const handleSignInAsUser = (userId: string, targetPortal: PortalId) => {
     switchUserPersona(userId);
     navigateToPortal(targetPortal);
-    logAction(targetPortal, 'LOGIN_SSO', `Signed in via Unified SSO as ${userId}`, 'GRANTED', 'Institutional SSO verified.');
+    logAction(targetPortal, 'LOGIN_SSO', `Signed in via Institutional SSO as ${userId}`, 'GRANTED', 'Institutional credentials verified server-side.');
     handleClose();
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    const trimmedId = identifierInput.trim().toLowerCase();
+    const trimmedId = identifierInput.trim();
     if (!trimmedId) {
       setErrorMsg('Please enter your Admission Number, Staff ID, or Email.');
       return;
     }
 
-    // Attempt matching among mock users
-    const matchedUser = users.find(
-      u =>
-        u.identifier.toLowerCase() === trimmedId ||
-        u.email.toLowerCase() === trimmedId ||
-        u.name.toLowerCase().includes(trimmedId)
-    );
+    if (!passwordInput) {
+      setErrorMsg('Please enter your account password or institutional PIN.');
+      return;
+    }
 
-    if (matchedUser) {
-      // Determine primary portal for this user
-      const primaryAssignment = matchedUser.portalAssignments[0];
-      const targetPortal = primaryAssignment?.portalId || (activeTab === 'STUDENT' ? 'STUDENT' : activeTab === 'APPLICANT' ? 'APPLICANT' : 'LECTURER');
-      handleSignInAsUser(matchedUser.id, targetPortal);
-    } else {
-      // Fallback based on active tab
-      if (activeTab === 'STUDENT') {
-        handleSignInAsUser('usr_john_student', 'STUDENT');
-      } else if (activeTab === 'APPLICANT') {
-        const applicant = users.find(u => u.portalAssignments.some(p => p.portalId === 'APPLICANT')) || users[0];
-        handleSignInAsUser(applicant.id, 'APPLICANT');
-      } else {
-        const staff = users.find(u => u.portalAssignments.some(p => p.portalId === 'LECTURER' || p.portalId === 'ADMIN')) || users[1];
-        handleSignInAsUser(staff.id, staff.portalAssignments[0]?.portalId || 'LECTURER');
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: trimmedId,
+          password: passwordInput,
+          tenantId: institutionalSettings.institutionCode || institutionalSettings.code || 'inst_apex_tvet'
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Authentication failed. Please verify credentials.');
+        setIsSubmitting(false);
+        return;
       }
+
+      if (data.sessionId && typeof window !== 'undefined') {
+        sessionStorage.setItem('erp_session_id', data.sessionId);
+      }
+
+      // Determine target portal
+      const authenticatedUser = data.user;
+      const primaryAssignment = authenticatedUser.portalAssignments?.[0];
+      const targetPortal = primaryAssignment?.portalId || (activeTab === 'STUDENT' ? 'STUDENT' : activeTab === 'APPLICANT' ? 'APPLICANT' : 'LECTURER');
+
+      handleSignInAsUser(authenticatedUser.id, targetPortal);
+    } catch (err: any) {
+      setErrorMsg('Network error connecting to institutional authentication gateway: ' + (err.message || 'unknown'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
