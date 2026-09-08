@@ -597,15 +597,15 @@ export function FinancePortalView() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
               <div className="p-4 rounded-xl bg-slate-850 border border-slate-700/80 space-y-2">
-                <span className="text-slate-400 uppercase font-bold block">Gateway Webhook Health</span>
-                <div className="text-emerald-400 text-sm font-bold">100% Success (0 Drops)</div>
-                <p className="text-[11px] text-slate-400">Paystack / Stripe / Interswitch</p>
+                <span className="text-slate-400 uppercase font-bold block">Payment Gateway Status</span>
+                <div className="text-emerald-400 text-sm font-bold">M-Pesa Daraja / Bank Gateway</div>
+                <p className="text-[11px] text-slate-400">Webhook endpoints active</p>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-850 border border-slate-700/80 space-y-2">
-                <span className="text-slate-400 uppercase font-bold block">Anti-Fraud Engine</span>
-                <div className="text-white text-sm font-bold">0 Duplicate Teller Alerts</div>
-                <p className="text-[11px] text-slate-400">SHA-256 Transaction Hash Verification</p>
+                <span className="text-slate-400 uppercase font-bold block">Transaction Integrity</span>
+                <div className="text-white text-sm font-bold">Idempotency Enforced</div>
+                <p className="text-[11px] text-slate-400">PostgreSQL Transactional Isolation</p>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-850 border border-slate-700/80 space-y-2">

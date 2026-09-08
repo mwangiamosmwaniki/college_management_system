@@ -170,7 +170,6 @@ interface ERPContextType {
   logout: () => void;
 
   // Interactive Actions
-  switchUserPersona: (userId: string) => void;
   navigateToPortal: (portalId: PortalId, defaultTab?: string) => boolean;
   logAction: (portalId: PortalId, action: string, resource: string, status: 'GRANTED' | 'DENIED' | 'FLAGGED', details: string) => void;
   
@@ -276,7 +275,15 @@ export function ERPProvider({ children }: { children: ReactNode }) {
     setLoginTargetPortal(target || null);
     setIsLoginModalOpen(true);
   };
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch {
+      // ignore network errors on logout
+    }
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('erp_session_id');
+    }
     setActivePortalId('PUBLIC');
     setIsMobileSidebarOpen(false);
   };
@@ -333,23 +340,6 @@ export function ERPProvider({ children }: { children: ReactNode }) {
     const roleName = assignment ? assignment.roleName : 'Unassigned';
     const entry = createAuditLog(currentUser, portalId, roleName, action, resource, status, details);
     setAuditLogs(prev => [entry, ...prev]);
-  };
-
-  const switchUserPersona = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    setCurrentUser(user);
-
-    // If current portal is not accessible to new persona, switch to their first assigned portal
-    const access = evaluatePortalAccess(user, activePortalId, roles);
-    if (!access.allowed) {
-      const firstPortal = user.portalAssignments[0]?.portalId || 'STUDENT';
-      setActivePortalId(firstPortal);
-      setActiveNavTab('dashboard');
-      logAction(firstPortal, 'SWITCH_PERSONA', `Switched to user ${user.name}`, 'GRANTED', `Active portal routed to ${firstPortal}.`);
-    } else {
-      logAction(activePortalId, 'SWITCH_PERSONA', `Switched to user ${user.name}`, 'GRANTED', `Retained in ${activePortalId}.`);
-    }
   };
 
   const navigateToPortal = (portalId: PortalId, defaultTab: string = 'dashboard'): boolean => {
@@ -1524,7 +1514,6 @@ export function ERPProvider({ children }: { children: ReactNode }) {
       executeExportDataset,
       executeRestoreEntity,
       executeCloneEntity,
-      switchUserPersona,
       navigateToPortal,
       checkPortalAccess,
       publishCrossPortalEvent,

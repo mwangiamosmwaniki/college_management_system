@@ -197,7 +197,7 @@ export function ExamPortalView() {
             <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
               <span className="text-slate-400 text-[10px] uppercase font-bold">Senate Gazette Hash</span>
               <div className="text-blue-400 text-xs font-bold truncate">0x9F4B...72A1</div>
-              <span className="text-emerald-400 text-[10px]">Cryptographically Sealed</span>
+              <span className="text-emerald-400 text-[10px]">Gazetted Record</span>
             </div>
           </div>
 
@@ -608,7 +608,7 @@ export function ExamPortalView() {
                 </div>
                 <div className="text-slate-400">Chief Invigilator: Dr. O. K. Johnson</div>
                 <div className="text-white">Candidates Seated: <strong className="text-emerald-400">180 / 180</strong></div>
-                <div className="text-[11px] text-slate-400">CCTV Stream: ACTIVE • Biometric: OK</div>
+                <div className="text-[11px] text-slate-400">Attendance Verification: Active</div>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-850 border border-slate-700/80 space-y-2">
@@ -618,7 +618,7 @@ export function ExamPortalView() {
                 </div>
                 <div className="text-slate-400">Chief Invigilator: Prof. H. Adeleke</div>
                 <div className="text-white">Candidates Seated: <strong className="text-emerald-400">320 / 320</strong></div>
-                <div className="text-[11px] text-slate-400">CCTV Stream: ACTIVE • Biometric: OK</div>
+                <div className="text-[11px] text-slate-400">Attendance Verification: Active</div>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-850 border border-slate-700/80 space-y-2">
@@ -628,7 +628,7 @@ export function ExamPortalView() {
                 </div>
                 <div className="text-slate-400">Chief Invigilator: Engr. M. Bello</div>
                 <div className="text-white">Active CBT Sessions: <strong className="text-blue-400">95 Terminals</strong></div>
-                <div className="text-[11px] text-slate-400">Network Latency: 4ms • Lockdown Browser: ON</div>
+                <div className="text-[11px] text-slate-400">Lab Session: In Progress</div>
               </div>
             </div>
 

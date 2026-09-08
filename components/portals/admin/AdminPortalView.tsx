@@ -58,7 +58,6 @@ export function AdminPortalView() {
     setIsHealthModalOpen,
     revokePortalRole,
     assignPortalRole,
-    switchUserPersona,
     updateUserStatus,
     openInstitutionalDocument
   } = useERP();
@@ -172,7 +171,7 @@ export function AdminPortalView() {
         staffDesignation: user.portalAssignments[0]?.roleName || 'Staff Member',
         securityOfficer: 'Prof. Walter Sterling (University Registrar)',
         auditClassification: 'Confidential Internal Memo',
-        governanceStandard: 'ISO/IEC 27001 RBAC Certified'
+        governanceStandard: 'Institutional RBAC Policy'
       }
     });
   };
@@ -736,15 +735,6 @@ export function AdminPortalView() {
                       >
                         <FileText className="w-3.5 h-3.5" />
                         <span>Letterhead Memo</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => switchUserPersona(targetUser.id)}
-                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
-                      >
-                        <UserCog className="w-3.5 h-3.5" />
-                        <span>Test Persona</span>
                       </button>
                     </div>
                   </div>

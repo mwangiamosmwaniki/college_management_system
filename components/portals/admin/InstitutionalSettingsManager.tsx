@@ -191,7 +191,7 @@ export function InstitutionalSettingsManager() {
         },
         metadata: {
           transactionId: 'TXN-BUR-2026-098124',
-          paymentMethod: 'Online Payment Gateway (PCI-DSS Cleared)',
+          paymentMethod: 'Online Payment Gateway',
           bursaryLedgerAccount: 'ACC-TUITION-GEN-4010',
           cashierOfficer: 'Robert Thorne (Bursar Authorized)',
           balanceRemaining: '$0.00 (Fully Paid)'

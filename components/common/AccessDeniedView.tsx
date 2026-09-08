@@ -7,7 +7,7 @@ import {
   ShieldAlert,
   Lock,
   ArrowLeft,
-  Users,
+  KeyRound,
   AlertTriangle,
   FileText
 } from 'lucide-react';
@@ -23,8 +23,7 @@ export function AccessDeniedView({ portalId, reason }: AccessDeniedViewProps) {
     portals,
     navigateToPortal,
     setIsSecuritySuiteOpen,
-    switchUserPersona,
-    users
+    openLoginModal
   } = useERP();
 
   const targetPortal = portals.find(p => p.id === portalId);
@@ -94,24 +93,17 @@ export function AccessDeniedView({ portalId, reason }: AccessDeniedViewProps) {
           </button>
         </div>
 
-        {/* Suggestion to switch to a persona that has access */}
-        <div className="pt-4 border-t border-slate-800/80 text-xs text-slate-400">
-          <span>Need access? Switch persona above or click a privileged persona:</span>
-          <div className="mt-2 flex flex-wrap justify-center gap-2">
-            {users
-              .filter(u => u.portalAssignments.some(a => a.portalId === portalId || a.portalId === 'ADMIN'))
-              .slice(0, 3)
-              .map(u => (
-                <button
-                  key={u.id}
-                  onClick={() => switchUserPersona(u.id)}
-                  className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] text-slate-200 font-medium transition flex items-center gap-1.5"
-                >
-                  <Users className="w-3 h-3 text-blue-400" />
-                  <span>Switch to {u.name}</span>
-                </button>
-              ))}
-          </div>
+        {/* Secure Re-authentication CTA */}
+        <div className="pt-4 border-t border-slate-800/80 text-xs text-slate-400 flex flex-col items-center gap-2">
+          <span>Need access to this portal? Authenticate with an authorized institutional account:</span>
+          <button
+            type="button"
+            onClick={() => openLoginModal(portalId)}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition flex items-center gap-2 shadow-sm"
+          >
+            <KeyRound className="w-4 h-4" />
+            <span>Sign In with Required Credentials</span>
+          </button>
         </div>
 
       </div>

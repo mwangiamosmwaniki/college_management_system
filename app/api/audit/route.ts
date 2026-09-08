@@ -1,36 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
+const BACKEND_URL = process.env.BACKEND_API_URL || 'http://localhost:8080';
+
+export async function GET(req: NextRequest) {
   try {
-    const payload = await req.json();
-    const { action, resource, portalId, status, details, actorId, institutionId, previousState, newState } = payload;
-
-    const serverTimestamp = new Date().toISOString();
-    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
-    const userAgent = req.headers.get('user-agent') || 'Unknown User-Agent';
-    const auditId = `aud_srv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-
-    const logEntry = {
-      id: auditId,
-      timestamp: serverTimestamp,
-      action: action || 'UNKNOWN_ACTION',
-      resource: resource || 'UNKNOWN_RESOURCE',
-      portalId: portalId || 'CORE',
-      status: status || 'GRANTED',
-      details: details || '',
-      actorId: actorId || 'SYSTEM_ACTOR',
-      institutionId: institutionId || 'inst_apex_tvet',
-      ipAddress: clientIp,
-      userAgent,
-      previousState: previousState || null,
-      newState: newState || null
-    };
-
-    return NextResponse.json({
-      success: true,
-      log: logEntry
+    const searchParams = req.nextUrl.searchParams.toString();
+    const backendRes = await fetch(`${BACKEND_URL}/api/v1/audit-logs${searchParams ? `?${searchParams}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: req.headers.get('cookie') || '',
+      },
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: 'Audit generation failed: ' + err.message }, { status: 500 });
+
+    const data = await backendRes.json();
+    return NextResponse.json(data, { status: backendRes.status });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Audit service unavailable';
+    return NextResponse.json(
+      { success: false, error: `Audit proxy error: ${message}` },
+      { status: 502 }
+    );
   }
 }

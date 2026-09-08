@@ -33,7 +33,7 @@ export function CentralHeader() {
   const {
     currentUser,
     users,
-    switchUserPersona,
+    openLoginModal,
     activePortalId,
     portals,
     navigateToPortal,
@@ -337,62 +337,73 @@ export function CentralHeader() {
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
 
-              {/* Persona Selection Dropdown */}
+              {/* Account & Security Session Menu */}
               {isPersonaMenuOpen && (
-                <div className="absolute right-0 mt-2 w-96 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-2.5 z-50 animate-in fade-in duration-100">
+                <div className="absolute right-0 mt-2 w-80 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-3 z-50 animate-in fade-in duration-100">
                   <div className="px-2 py-1.5 border-b border-slate-800 mb-2">
-                    <div className="text-xs font-bold text-white">Switch User Account</div>
-                  </div>
-                  <div className="max-h-96 overflow-y-auto space-y-1.5">
-                    {users.map(u => {
-                      const isSelected = u.id === currentUser.id;
-                      return (
-                        <button
-                          key={u.id}
-                          onClick={() => {
-                            switchUserPersona(u.id);
-                            setIsPersonaMenuOpen(false);
-                          }}
-                          className={`w-full text-left p-2.5 rounded-lg border text-xs transition cursor-pointer ${
-                            isSelected
-                              ? 'bg-blue-600/20 border-blue-500/50 text-white'
-                              : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/60 text-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="font-semibold text-slate-100 flex items-center gap-1.5">
-                              <span>{u.name}</span>
-                              <span className="font-mono text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded border border-slate-700">
-                                {u.identifier}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* Portal Assignments Pills */}
-                          <div className="mt-1.5 flex flex-wrap gap-1">
-                            {u.portalAssignments.map(a => (
-                              <span
-                                key={a.portalId}
-                                className={`text-[9px] px-1.5 py-0.2 rounded font-mono flex items-center gap-1 border ${
-                                  a.isMonitor
-                                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                                    : a.isAdmin
-                                    ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
-                                    : 'bg-slate-900 text-slate-300 border-slate-700'
-                                }`}
-                              >
-                                <span>{a.portalId}:</span>
-                                <span className="font-medium text-slate-200">{a.roleName}</span>
-                              </span>
-                            ))}
-                          </div>
-                        </button>
-                      );
-                    })}
+                    <div className="text-xs font-bold text-white flex items-center justify-between">
+                      <span>Institutional Session</span>
+                      <span className="px-1.5 py-0.2 text-[9px] rounded bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30">
+                        Active
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Persona Dropdown Footer Actions */}
-                  <div className="mt-2 pt-2 border-t border-slate-800 space-y-1">
+                  {/* Current Authenticated User Card */}
+                  <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 mb-2 space-y-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm border border-blue-400/50 shrink-0">
+                        {currentUser.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-100 text-xs truncate">{currentUser.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{currentUser.identifier}</div>
+                        <div className="text-[10px] text-slate-500 truncate">{currentUser.email}</div>
+                      </div>
+                    </div>
+
+                    {/* Active Portal Roles */}
+                    <div className="pt-2 border-t border-slate-800/80">
+                      <div className="text-[10px] text-slate-400 mb-1 font-medium">Assigned Roles:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {currentUser.portalAssignments.map(a => (
+                          <span
+                            key={a.portalId}
+                            className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-blue-950/60 border border-blue-800/50 text-blue-300"
+                          >
+                            {a.roleName} ({a.portalId})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Security Session Info */}
+                  <div className="px-2 py-1.5 bg-slate-950/40 rounded border border-slate-800/60 text-[10px] text-slate-400 space-y-1 mb-2 font-mono">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Backend:</span>
+                      <span className="text-slate-300">Spring Boot 3 + PostgreSQL</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Protection:</span>
+                      <span className="text-emerald-400">Server-Side RBAC + Tenant Isolation</span>
+                    </div>
+                  </div>
+
+                  {/* Menu Actions */}
+                  <div className="pt-2 border-t border-slate-800 space-y-1">
+                    <button
+                      onClick={() => {
+                        setIsPersonaMenuOpen(false);
+                        openLoginModal();
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-blue-300 hover:text-blue-200 hover:bg-blue-950/40 transition cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Switch Account / Re-authenticate</span>
+                      </div>
+                    </button>
                     <button
                       onClick={() => {
                         navigateToPortal('PUBLIC');
@@ -415,7 +426,7 @@ export function CentralHeader() {
                     >
                       <div className="flex items-center gap-2">
                         <LogOut className="w-3.5 h-3.5" />
-                        <span>Sign Out / Lock Session</span>
+                        <span>Sign Out / Invalidate Session</span>
                       </div>
                     </button>
                   </div>
