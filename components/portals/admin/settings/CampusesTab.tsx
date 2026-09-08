@@ -16,7 +16,8 @@ import {
   Trash2,
   X,
   Save,
-  Compass
+  Compass,
+  AlertCircle
 } from 'lucide-react';
 
 interface CampusesTabProps {
@@ -28,6 +29,8 @@ export function CampusesTab({ settings, onUpdate }: CampusesTabProps) {
   const campuses = settings.campuses || [];
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,6 +62,7 @@ export function CampusesTab({ settings, onUpdate }: CampusesTabProps) {
 
   const handleOpenAddModal = () => {
     setEditingCampus(null);
+    setFormError(null);
     setFormData({
       id: `camp_${Date.now().toString().slice(-6)}`,
       name: '',
@@ -78,15 +82,15 @@ export function CampusesTab({ settings, onUpdate }: CampusesTabProps) {
 
   const handleOpenEditModal = (campus: CampusBranch) => {
     setEditingCampus(campus);
+    setFormError(null);
     setFormData({ ...campus });
     setIsModalOpen(true);
   };
 
   const handleDeleteCampus = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete campus "${name}"? This action cannot be undone.`)) {
-      const updated = campuses.filter(c => c.id !== id);
-      onUpdate({ campuses: updated }, `Campus "${name}" removed successfully.`);
-    }
+    const updated = campuses.filter(c => c.id !== id);
+    onUpdate({ campuses: updated }, `Campus "${name}" removed successfully.`);
+    setDeleteConfirmId(null);
   };
 
   const handleToggleStatus = (id: string) => {
@@ -103,7 +107,7 @@ export function CampusesTab({ settings, onUpdate }: CampusesTabProps) {
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name?.trim() || !formData.code?.trim()) {
-      alert('Please provide a campus name and code.');
+      setFormError('Please provide a campus name and campus code.');
       return;
     }
 
@@ -130,6 +134,7 @@ export function CampusesTab({ settings, onUpdate }: CampusesTabProps) {
       onUpdate({ campuses: updated }, `Campus "${newCampus.name}" added successfully.`);
     }
     setIsModalOpen(false);
+    setFormError(null);
   };
 
   const getTypeBadge = (type: CampusBranch['type']) => {
@@ -296,14 +301,34 @@ export function CampusesTab({ settings, onUpdate }: CampusesTabProps) {
                 Edit
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleDeleteCampus(campus.id, campus.name)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold transition cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                Delete
-              </button>
+              {deleteConfirmId === campus.id ? (
+                <div className="flex items-center gap-1.5 animate-in fade-in">
+                  <span className="text-[11px] text-rose-300 font-semibold">Delete?</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteCampus(campus.id, campus.name)}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmId(null)}
+                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmId(campus.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold transition cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -328,7 +353,7 @@ export function CampusesTab({ settings, onUpdate }: CampusesTabProps) {
       {/* Add / Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-xl rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-6 space-y-5">
+          <div className="w-full max-w-xl rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-6 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-blue-400" />
@@ -342,6 +367,13 @@ export function CampusesTab({ settings, onUpdate }: CampusesTabProps) {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {formError && (
+              <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSaveSubmit} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

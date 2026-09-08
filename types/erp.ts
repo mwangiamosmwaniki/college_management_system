@@ -78,6 +78,13 @@ export interface UserIdentity {
   phone?: string;
   status: 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'ON_LEAVE';
   portalAssignments: PortalAssignment[];
+  passwordHash?: string;
+  pin?: string;
+  impersonatedBy?: string;
+  impersonationReason?: string;
+  impersonatedAt?: string;
+  failedLoginAttempts?: number;
+  lockedUntil?: string;
 }
 
 export type PermissionAction = 
@@ -127,6 +134,11 @@ export interface AuditLogEntry {
   status: 'GRANTED' | 'DENIED' | 'FLAGGED';
   ipAddress: string;
   details: string;
+  actorId?: string;
+  sessionId?: string;
+  reason?: string;
+  previousState?: any;
+  newState?: any;
 }
 
 export interface CrossPortalEvent {

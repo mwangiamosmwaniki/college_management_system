@@ -14,7 +14,8 @@ import {
   X,
   Save,
   Building,
-  Smartphone
+  Smartphone,
+  AlertCircle
 } from 'lucide-react';
 
 interface PaymentAccountsTabProps {
@@ -26,6 +27,8 @@ export function PaymentAccountsTab({ settings, onUpdate }: PaymentAccountsTabPro
   const accounts = settings.paymentAccounts || [];
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,6 +63,7 @@ export function PaymentAccountsTab({ settings, onUpdate }: PaymentAccountsTabPro
 
   const handleOpenAddModal = () => {
     setEditingAccount(null);
+    setFormError(null);
     setFormData({
       id: `acc_${Date.now().toString().slice(-6)}`,
       label: 'New Payment Collection A/C',
@@ -76,15 +80,15 @@ export function PaymentAccountsTab({ settings, onUpdate }: PaymentAccountsTabPro
 
   const handleOpenEditModal = (acc: SchoolPaymentAccount) => {
     setEditingAccount(acc);
+    setFormError(null);
     setFormData({ ...acc });
     setIsModalOpen(true);
   };
 
   const handleDeleteAccount = (id: string, label: string) => {
-    if (confirm(`Are you sure you want to delete payment account "${label}"? This action cannot be undone.`)) {
-      const updated = accounts.filter(a => a.id !== id);
-      onUpdate({ paymentAccounts: updated }, `Payment account "${label}" deleted.`);
-    }
+    const updated = accounts.filter(a => a.id !== id);
+    onUpdate({ paymentAccounts: updated }, `Payment account "${label}" deleted.`);
+    setDeleteConfirmId(null);
   };
 
   const handleToggleStatus = (id: string) => {
@@ -101,7 +105,7 @@ export function PaymentAccountsTab({ settings, onUpdate }: PaymentAccountsTabPro
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.label?.trim() || !formData.accountNumber?.trim()) {
-      alert('Please provide an account label and account number.');
+      setFormError('Please provide an account label and account number.');
       return;
     }
 
@@ -125,6 +129,7 @@ export function PaymentAccountsTab({ settings, onUpdate }: PaymentAccountsTabPro
       onUpdate({ paymentAccounts: updated }, `Payment account "${newAcc.label}" added.`);
     }
     setIsModalOpen(false);
+    setFormError(null);
   };
 
   const getPurposeBadge = (purpose: SchoolPaymentAccount['purpose']) => {
@@ -258,14 +263,34 @@ export function PaymentAccountsTab({ settings, onUpdate }: PaymentAccountsTabPro
                 Edit
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleDeleteAccount(acc.id, acc.label)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold transition cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                Delete
-              </button>
+              {deleteConfirmId === acc.id ? (
+                <div className="flex items-center gap-1.5 animate-in fade-in">
+                  <span className="text-[11px] text-rose-300 font-semibold">Delete?</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAccount(acc.id, acc.label)}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmId(null)}
+                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmId(acc.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold transition cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -290,7 +315,7 @@ export function PaymentAccountsTab({ settings, onUpdate }: PaymentAccountsTabPro
       {/* Add / Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-xl rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-6 space-y-5">
+          <div className="w-full max-w-xl rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-6 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-blue-400" />
@@ -304,6 +329,13 @@ export function PaymentAccountsTab({ settings, onUpdate }: PaymentAccountsTabPro
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {formError && (
+              <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSaveSubmit} className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -48,6 +48,14 @@ export function evaluatePortalAccess(
     };
   }
 
+  // Account status check (Lock / Suspension)
+  if (user.status !== 'ACTIVE') {
+    return {
+      allowed: false,
+      reason: `Account Inactive: User account '${user.name}' (${user.identifier}) is currently ${user.status}. Portal access is suspended.`
+    };
+  }
+
   // Super Admin can access all portals by default, but still operates under administrative audit
   const isSuperAdmin = user.portalAssignments.some(
     a => a.portalId === 'ADMIN' && a.roleId === 'ROLE_SUPER_ADMIN'
@@ -56,6 +64,14 @@ export function evaluatePortalAccess(
   const directAssignment = user.portalAssignments.find(a => a.portalId === portalId);
 
   if (directAssignment) {
+    const roleDef = rolesRegistry.find(r => r.id === directAssignment.roleId);
+    if (!roleDef) {
+      return {
+        allowed: false,
+        reason: `Invalid Role: Role '${directAssignment.roleId}' is not registered in the system.`
+      };
+    }
+
     return {
       allowed: true,
       roleName: directAssignment.roleName,
@@ -80,7 +96,7 @@ export function evaluatePortalAccess(
 
 /**
  * Evaluates whether a user is the legitimate author/owner of a record.
- * Handles normalization across user id, identifier (e.g. STU-2026-00124 vs usr_john_doe), and name.
+ * Uses strict ID comparison against user ID and official identifier.
  */
 export function evaluateRecordOwnership(
   user: UserIdentity,
@@ -92,30 +108,25 @@ export function evaluateRecordOwnership(
     return { isOwner: true, reason: 'Unassigned/system-level record.' };
   }
 
-  const uId = (user.id || '').toLowerCase();
-  const uIdent = (user.identifier || '').toLowerCase();
-  const uName = (user.name || '').toLowerCase();
+  const uId = (user.id || '').trim().toLowerCase();
+  const uIdent = (user.identifier || '').trim().toLowerCase();
 
-  const oId = (ownerId || '').toLowerCase();
-  const cBy = (createdBy || '').toLowerCase();
-  const oName = (ownerName || '').toLowerCase();
+  const oId = (ownerId || '').trim().toLowerCase();
+  const cBy = (createdBy || '').trim().toLowerCase();
 
-  const matches =
-    (oId && (oId === uId || oId === uIdent || uId.includes(oId) || oId.includes(uId))) ||
-    (cBy && (cBy === uId || cBy === uIdent || cBy === uName || uName.includes(cBy))) ||
-    (oName && (oName === uName || uName.includes(oName) || oName.includes(uName))) ||
-    (uId.includes('henderson') && (oId.includes('lec-001') || oId.includes('henderson') || oName.includes('henderson'))) ||
-    (uId.includes('vance') && (oId.includes('lec-002') || oId.includes('vance') || oName.includes('vance'))) ||
-    (uId.includes('john_doe') && (oId.includes('stu-001') || oId.includes('stu-2026-00124') || oName.includes('john doe') || oName.includes('alex rivera'))) ||
-    (uId.includes('sarah_connor') && (oId.includes('stu-002') || oId.includes('stu-2026-00188') || oName.includes('sarah connor') || oName.includes('tariq')));
+  // Strict identifier matching against user id or unique user identifier
+  const isOwner = Boolean(
+    (oId && (oId === uId || oId === uIdent)) ||
+    (cBy && (cBy === uId || cBy === uIdent))
+  );
 
-  if (matches) {
-    return { isOwner: true, reason: `User '${user.name}' is verified as the record owner/author.` };
+  if (isOwner) {
+    return { isOwner: true, reason: `User '${user.name}' (${user.identifier}) is verified as the record owner.` };
   }
 
   return {
     isOwner: false,
-    reason: `Ownership Mismatch: Record belongs to '${ownerName || ownerId || createdBy}', not '${user.name}'.`
+    reason: `Ownership Mismatch: Record belongs to '${ownerName || ownerId || createdBy}', not '${user.identifier}'.`
   };
 }
 
@@ -260,12 +271,20 @@ export function createAuditLog(
   action: string,
   resource: string,
   status: 'GRANTED' | 'DENIED' | 'FLAGGED',
-  details: string
+  details: string,
+  metadata?: {
+    actorId?: string;
+    sessionId?: string;
+    reason?: string;
+    previousState?: any;
+    newState?: any;
+    ipAddress?: string;
+  }
 ): AuditLogEntry {
   const now = new Date();
   const dateStr = now.toISOString().replace('T', ' ').substring(0, 19);
   return {
-    id: `aud_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    id: `aud_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
     timestamp: dateStr,
     userId: user.id,
     userName: user.name,
@@ -275,8 +294,13 @@ export function createAuditLog(
     action,
     resource,
     status,
-    ipAddress: '192.168.10.' + (Math.floor(Math.random() * 200) + 1),
-    details
+    ipAddress: metadata?.ipAddress || '127.0.0.1 (Reverse Proxy Authenticated)',
+    details,
+    actorId: metadata?.actorId || (user.impersonatedBy ? user.impersonatedBy : user.id),
+    sessionId: metadata?.sessionId || (typeof window !== 'undefined' ? (sessionStorage.getItem('erp_session_id') || 'sess_portal') : 'sess_srv'),
+    reason: metadata?.reason || (user.impersonatedBy ? `Administrative Impersonation by ${user.impersonatedBy}` : undefined),
+    previousState: metadata?.previousState,
+    newState: metadata?.newState
   };
 }
 

@@ -34,7 +34,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-LEC-001',
+    ownerId: 'usr_dr_henderson',
     ownerName: 'Dr. Marcus Henderson',
     createdAt: '2026-01-10T08:00:00.000Z',
     createdBy: 'Dr. Marcus Henderson',
@@ -69,7 +69,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-LEC-001',
+    ownerId: 'usr_dr_henderson',
     ownerName: 'Dr. Marcus Henderson',
     createdAt: '2026-02-12T09:00:00.000Z',
     createdBy: 'Dr. Marcus Henderson',
@@ -98,7 +98,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-LEC-001',
+    ownerId: 'usr_dr_henderson',
     ownerName: 'Dr. Marcus Henderson',
     createdAt: '2026-08-20T16:00:00.000Z',
     createdBy: 'Dr. Marcus Henderson',
@@ -126,7 +126,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-LEC-002',
+    ownerId: 'usr_dr_vance',
     ownerName: 'Dr. Arthur Vance',
     createdAt: '2026-02-10T10:00:00.000Z',
     createdBy: 'Dr. Arthur Vance',
@@ -158,7 +158,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-STU-001',
+    ownerId: 'usr_john_doe',
     ownerName: 'Alex Rivera',
     createdAt: '2024-09-01T08:00:00.000Z',
     createdBy: 'Admissions Office',
@@ -190,7 +190,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-STU-002',
+    ownerId: 'usr_sarah_connor',
     ownerName: 'Sarah Connor',
     createdAt: '2024-09-01T08:00:00.000Z',
     createdBy: 'Admissions Office',
@@ -254,7 +254,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-LEC-001',
+    ownerId: 'usr_dr_henderson',
     ownerName: 'Dr. Marcus Henderson',
     createdAt: '2026-08-01T10:00:00.000Z',
     createdBy: 'Dr. Marcus Henderson',
@@ -285,7 +285,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-LEC-001',
+    ownerId: 'usr_dr_henderson',
     ownerName: 'Dr. Marcus Henderson',
     createdAt: '2026-08-22T14:00:00.000Z',
     createdBy: 'Dr. Marcus Henderson',
@@ -315,7 +315,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-LEC-001',
+    ownerId: 'usr_dr_henderson',
     ownerName: 'Dr. Marcus Henderson',
     createdAt: '2026-03-01T09:00:00.000Z',
     createdBy: 'Dr. Marcus Henderson',
@@ -380,7 +380,7 @@ export const INITIAL_CRUD_ENTITIES: CrudRecordMeta[] = [
     departmentId: 'DPT_CS',
     facultyId: 'FAC_SCI',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-LEC-001',
+    ownerId: 'usr_dr_henderson',
     ownerName: 'Dr. Marcus Henderson',
     createdAt: '2026-08-24T09:30:00.000Z',
     createdBy: 'Dr. Marcus Henderson',
@@ -571,28 +571,21 @@ export interface CrudPermissionEvaluation {
 }
 
 /**
- * Universal record ownership validator across identifiers, user IDs, and names.
+ * Universal record ownership validator using strict ID matching.
  */
 export function isRecordOwner(user: UserIdentity, entity?: CrudRecordMeta): boolean {
   if (!entity) return true;
   if (!entity.ownerId && !entity.createdBy && !entity.ownerName) return true;
 
-  const uId = (user.id || '').toLowerCase();
-  const uIdent = (user.identifier || '').toLowerCase();
-  const uName = (user.name || '').toLowerCase();
+  const uId = (user.id || '').trim().toLowerCase();
+  const uIdent = (user.identifier || '').trim().toLowerCase();
 
-  const oId = (entity.ownerId || '').toLowerCase();
-  const cBy = (entity.createdBy || '').toLowerCase();
-  const oName = (entity.ownerName || '').toLowerCase();
+  const oId = (entity.ownerId || '').trim().toLowerCase();
+  const cBy = (entity.createdBy || '').trim().toLowerCase();
 
-  return (
-    (oId && (oId === uId || oId === uIdent || uId.includes(oId) || oId.includes(uId))) ||
-    (cBy && (cBy === uId || cBy === uIdent || cBy === uName || uName.includes(cBy))) ||
-    (oName && (oName === uName || uName.includes(oName) || oName.includes(uName))) ||
-    (uId.includes('henderson') && (oId.includes('lec-001') || oId.includes('henderson') || oName.includes('henderson'))) ||
-    (uId.includes('vance') && (oId.includes('lec-002') || oId.includes('vance') || oName.includes('vance'))) ||
-    (uId.includes('john_doe') && (oId.includes('stu-001') || oId.includes('stu-2026-00124') || oName.includes('john doe') || oName.includes('alex rivera'))) ||
-    (uId.includes('sarah_connor') && (oId.includes('stu-002') || oId.includes('stu-2026-00188') || oName.includes('sarah connor') || oName.includes('tariq')))
+  return Boolean(
+    (oId && (oId === uId || oId === uIdent)) ||
+    (cBy && (cBy === uId || cBy === uIdent))
   );
 }
 
@@ -1243,7 +1236,7 @@ export function runAutomatedCrudAcceptanceTests(
     facultyId: 'FAC_SCI',
     departmentId: 'DPT_CS',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-LEC-002',
+    ownerId: 'usr_dr_vance',
     ownerName: 'Dr. Arthur Vance',
     createdAt: timestamp,
     createdBy: 'Dr. Arthur Vance',
@@ -1283,7 +1276,7 @@ export function runAutomatedCrudAcceptanceTests(
     facultyId: 'FAC_SCI',
     departmentId: 'DPT_CS',
     campusId: 'CAMPUS_MAIN',
-    ownerId: 'USR-STU-002',
+    ownerId: 'usr_sarah_connor',
     ownerName: 'Sarah Connor',
     createdAt: timestamp,
     createdBy: 'Sarah Connor',

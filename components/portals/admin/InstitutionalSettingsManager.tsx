@@ -77,6 +77,7 @@ export function InstitutionalSettingsManager() {
   >('PROFILE');
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null);
   const [previewDocType, setPreviewDocType] = useState<'TRANSCRIPT' | 'RECEIPT' | 'ADMISSION_LETTER' | 'BROADSHEET' | 'CLEARANCE_CERTIFICATE'>('TRANSCRIPT');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleDirectUpdate = (updatedPartial: Partial<InstitutionalSettings>, message: string) => {
     const next = { ...formData, ...updatedPartial };
@@ -109,16 +110,14 @@ export function InstitutionalSettingsManager() {
     setTimeout(() => setSavedFeedback(null), 4000);
   };
 
-  const handleReset = () => {
-    if (window.confirm('Reset all institutional settings, logo, motto and letterhead parameters to default university template?')) {
-      resetInstitutionalSettings();
-      // Synchronize local form with context reset
-      setTimeout(() => {
-        setFormData(institutionalSettings);
-      }, 50);
-      setSavedFeedback('Restored default university heraldry and letterhead branding.');
-      setTimeout(() => setSavedFeedback(null), 3000);
-    }
+  const handleConfirmReset = () => {
+    resetInstitutionalSettings();
+    setTimeout(() => {
+      setFormData(institutionalSettings);
+    }, 50);
+    setShowResetConfirm(false);
+    setSavedFeedback('Restored default university heraldry and letterhead branding.');
+    setTimeout(() => setSavedFeedback(null), 3000);
   };
 
   const handleTestGenerateSampleDoc = (type: 'TRANSCRIPT' | 'RECEIPT' | 'ADMISSION_LETTER' | 'BROADSHEET' | 'CLEARANCE_CERTIFICATE') => {
@@ -328,14 +327,34 @@ export function InstitutionalSettingsManager() {
 
         {/* Global Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Reset Defaults
-          </button>
+          {showResetConfirm ? (
+            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-900 border border-rose-500/40 animate-in fade-in">
+              <span className="text-xs text-rose-300 font-semibold px-1">Reset all settings to default?</span>
+              <button
+                type="button"
+                onClick={handleConfirmReset}
+                className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer"
+              >
+                Confirm
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowResetConfirm(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset Defaults
+            </button>
+          )}
           <button
             type="button"
             onClick={() => handleTestGenerateSampleDoc('TRANSCRIPT')}
