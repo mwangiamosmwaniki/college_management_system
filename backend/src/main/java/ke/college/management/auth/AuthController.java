@@ -13,11 +13,14 @@ import ke.college.management.auth.dto.ResetPasswordRequest;
 import ke.college.management.auth.dto.UserDto;
 import ke.college.management.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -35,6 +38,20 @@ public class AuthController {
     ) {
         AuthResponse response = authService.authenticate(request, httpRequest);
         return ApiResponse.success("Authenticated successfully", response);
+    }
+
+    @GetMapping("/csrf")
+    @Operation(summary = "Obtain current session CSRF token")
+    public ApiResponse<Map<String, String>> getCsrf(HttpServletRequest request) {
+        CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+        if (token == null) {
+            token = (CsrfToken) request.getAttribute("_csrf");
+        }
+        return ApiResponse.success(Map.of(
+            "token", token != null ? token.getToken() : "",
+            "headerName", token != null ? token.getHeaderName() : "X-XSRF-TOKEN",
+            "parameterName", token != null ? token.getParameterName() : "_csrf"
+        ));
     }
 
     @GetMapping("/me")

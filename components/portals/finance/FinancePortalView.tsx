@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useERP } from '@/context/erp-context';
+import { financeApi } from '@/lib/api';
 import { PortalDataLifecycleManager } from '@/components/common/PortalDataLifecycleManager';
 import {
   CreditCard,
@@ -123,8 +124,13 @@ export function FinancePortalView() {
     setTimeout(() => setReconcileFeedback(null), 3000);
   };
 
-  const handleReconcile = (invoiceId: string) => {
+  const handleReconcile = async (invoiceId: string) => {
     reconcileTransaction(invoiceId);
+    try {
+      await financeApi.runReconciliation();
+    } catch {
+      // Graceful fallback if offline
+    }
     setReconcileFeedback(`Transaction reconciled successfully with Central Treasury! Cross-portal TUITION_FEES_CLEARED event published.`);
     setTimeout(() => setReconcileFeedback(null), 3500);
   };

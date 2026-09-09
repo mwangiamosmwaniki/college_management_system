@@ -33,4 +33,14 @@ export const admissionsApi = {
       method: 'PUT',
     });
   },
+
+  matriculateApplicant: async (applicationId: string, campusId?: string, termId?: string): Promise<ApiResponse<any>> => {
+    const query = new URLSearchParams();
+    if (campusId) query.append('campusId', campusId);
+    if (termId) query.append('termId', termId);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiClient<any>(`/api/v1/admissions/applications/${applicationId}/matriculate${qs}`, {
+      method: 'POST',
+    });
+  },
 };

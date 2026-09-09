@@ -7,7 +7,7 @@ server:
       cookie:
         name: COLLEGE_ERP_SESSION
         http-only: true
-        secure: true
+        secure: ${SESSION_COOKIE_SECURE:false}
         same-site: lax
 
 spring:
@@ -80,6 +80,10 @@ app:
       requests-per-minute: 60
       login-attempts-max: 5
       lockout-duration-seconds: 900
+  mail:
+    from: ${MAIL_FROM:noreply@institution.ac.ke}
+    from-name: ${MAIL_FROM_NAME:Institutional ERP Portal}
+    frontend-url: ${FRONTEND_URL:http://localhost:3000}
   mpesa:
     env: ${MPESA_ENV:sandbox}
     consumer-key: ${MPESA_CONSUMER_KEY:sandbox_consumer_key}

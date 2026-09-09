@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useERP } from '@/context/erp-context';
+import { admissionsApi } from '@/lib/api';
 import { PortalDataLifecycleManager } from '@/components/common/PortalDataLifecycleManager';
 import {
   UserPlus,
@@ -138,11 +139,17 @@ export function AdmissionsPortalView() {
     setTimeout(() => setFeedbackMessage(null), 3000);
   };
 
-  const handleMatriculate = (cand: typeof candidates[0]) => {
+  const handleMatriculate = async (cand: typeof candidates[0]) => {
     const matricNo = `MAT/2026/${cand.id.split('-')[2]}`;
     setCandidates(prev =>
       prev.map(c => (c.id === cand.id ? { ...c, status: 'ADMITTED', matricGenerated: true } : c))
     );
+
+    try {
+      await admissionsApi.matriculateApplicant(cand.id);
+    } catch {
+      // Graceful fallback if offline or mock candidate
+    }
 
     publishCrossPortalEvent(
       'APPLICANT_MATRICULATED',

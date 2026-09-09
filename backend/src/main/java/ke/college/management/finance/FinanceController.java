@@ -42,6 +42,7 @@ public class FinanceController {
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
+    private final FinanceReconciliationService reconciliationService;
 
     @GetMapping("/invoices")
     @PreAuthorize("hasAuthority('FINANCE_VIEW') or hasRole('ADMIN')")
@@ -129,6 +130,24 @@ public class FinanceController {
     public ApiResponse<Map<String, String>> mpesaCallback(@RequestBody Map<String, Object> callbackData) {
         boolean processed = paymentService.processMpesaCallback(callbackData);
         return ApiResponse.success("Callback processed", Map.of("status", processed ? "ACCEPTED" : "IGNORED"));
+    }
+
+    @PostMapping("/reconciliation/run")
+    @PreAuthorize("hasAuthority('FINANCE_MANAGE') or hasRole('ADMIN')")
+    @Operation(summary = "Run authoritative financial reconciliation and audit discrepancy report")
+    public ApiResponse<FinanceReconciliationService.ReconciliationReport> runReconciliation() {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        FinanceReconciliationService.ReconciliationReport report = reconciliationService.runReconciliation(institutionId);
+        return ApiResponse.success("Financial reconciliation completed", report);
+    }
+
+    @GetMapping("/reconciliation/report")
+    @PreAuthorize("hasAuthority('FINANCE_VIEW') or hasRole('ADMIN')")
+    @Operation(summary = "Fetch current financial reconciliation report")
+    public ApiResponse<FinanceReconciliationService.ReconciliationReport> getReconciliationReport() {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        FinanceReconciliationService.ReconciliationReport report = reconciliationService.runReconciliation(institutionId);
+        return ApiResponse.success(report);
     }
 
     @Data

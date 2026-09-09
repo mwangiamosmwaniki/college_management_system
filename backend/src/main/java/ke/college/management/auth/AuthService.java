@@ -13,6 +13,7 @@ import ke.college.management.auth.dto.ResetPasswordRequest;
 import ke.college.management.auth.dto.UserDto;
 import ke.college.management.auth.entity.PasswordResetToken;
 import ke.college.management.auth.repository.PasswordResetTokenRepository;
+import ke.college.management.common.EmailService;
 import ke.college.management.exceptions.BadRequestException;
 import ke.college.management.exceptions.UnauthorizedException;
 import ke.college.management.security.CustomUserDetails;
@@ -22,6 +23,7 @@ import ke.college.management.users.entity.User;
 import ke.college.management.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
@@ -57,6 +59,10 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
     private final RateLimiterService rateLimiterService;
+    private final EmailService emailService;
+
+    @Value("${app.mail.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -325,8 +331,10 @@ public class AuthService {
                 null
         );
 
-        // In production, token is dispatched via institutional email / SMS provider. Never log the token!
-        log.info("Password reset link dispatched securely for user: {}", user.getId());
+        // Dispatch reset token via configured email provider. Never log the raw token!
+        String resetLink = frontendUrl + "/app?action=reset-password&token=" + rawToken;
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), resetLink);
+        log.info("Password reset email successfully dispatched for user: {}", user.getId());
     }
 
     @Transactional

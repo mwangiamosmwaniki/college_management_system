@@ -1,8 +1,10 @@
 package ke.college.management.finance;
 
 import ke.college.management.audit.AuditService;
+import ke.college.management.common.EmailService;
 import ke.college.management.exceptions.BadRequestException;
 import ke.college.management.exceptions.ResourceNotFoundException;
+import ke.college.management.finance.daraja.DarajaService;
 import ke.college.management.finance.dto.CreateInvoiceRequest;
 import ke.college.management.finance.dto.RecordPaymentRequest;
 import ke.college.management.finance.entity.FinancialLedger;
@@ -47,6 +49,8 @@ public class PaymentService {
     private final PaymentAllocationRepository paymentAllocationRepository;
     private final FinancialLedgerRepository financialLedgerRepository;
     private final AuditService auditService;
+    private final DarajaService darajaService;
+    private final EmailService emailService;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -323,19 +327,32 @@ public class PaymentService {
             sanitizedPhone = sanitizedPhone.substring(1);
         }
 
-        String merchantRequestId = "MR_" + System.currentTimeMillis();
-        String checkoutRequestId = "ws_CO_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 6);
+        String accRef = accountReference != null && !accountReference.isBlank() ? accountReference : "FEE-" + studentId;
+
+        // Execute real Daraja STK Push
+        DarajaService.StkPushResult pushResult = darajaService.initiateStkPush(
+                sanitizedPhone,
+                amount,
+                accRef,
+                "Institutional Fee Payment"
+        );
+
+        if (!pushResult.isSuccess()) {
+            throw new BadRequestException(pushResult.getResponseDescription() != null
+                    ? pushResult.getResponseDescription()
+                    : "M-Pesa gateway rejected the transaction initiation request");
+        }
 
         MpesaTransaction tx = MpesaTransaction.builder()
                 .id("tx_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16))
                 .institutionId(institutionId)
                 .studentId(studentId)
                 .invoiceId(invoiceId)
-                .merchantRequestId(merchantRequestId)
-                .checkoutRequestId(checkoutRequestId)
+                .merchantRequestId(pushResult.getMerchantRequestId())
+                .checkoutRequestId(pushResult.getCheckoutRequestId())
                 .phoneNumber(sanitizedPhone)
                 .amount(amount)
-                .accountReference(accountReference != null ? accountReference : "FEE-" + studentId)
+                .accountReference(accRef)
                 .status("PENDING")
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
@@ -395,8 +412,38 @@ public class PaymentService {
         tx.setUpdatedAt(Instant.now());
 
         if (resultCode != null && resultCode == 0) {
-            // Success: extract transaction code
-            String mpesaCode = "SJA" + (System.currentTimeMillis() % 10000000);
+            // Extract real metadata items from Safaricom Daraja callback
+            String mpesaCode = null;
+            BigDecimal actualPaidAmount = tx.getAmount();
+
+            if (stkCallback.containsKey("CallbackMetadata") && stkCallback.get("CallbackMetadata") != null) {
+                try {
+                    Map<String, Object> metadata = (Map<String, Object>) stkCallback.get("CallbackMetadata");
+                    List<Map<String, Object>> items = (List<Map<String, Object>>) metadata.get("Item");
+                    if (items != null) {
+                        for (Map<String, Object> item : items) {
+                            String name = (String) item.get("Name");
+                            Object val = item.get("Value");
+                            if ("MpesaReceiptNumber".equalsIgnoreCase(name) && val != null) {
+                                mpesaCode = String.valueOf(val).trim();
+                            } else if ("Amount".equalsIgnoreCase(name) && val != null) {
+                                actualPaidAmount = new BigDecimal(String.valueOf(val));
+                            }
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.warn("Failed to parse Daraja CallbackMetadata: {}", ex.getMessage());
+                }
+            }
+
+            if (mpesaCode == null && stkCallback.containsKey("MpesaReceiptNumber")) {
+                mpesaCode = String.valueOf(stkCallback.get("MpesaReceiptNumber")).trim();
+            }
+            if (mpesaCode == null || mpesaCode.isBlank()) {
+                mpesaCode = checkoutRequestId;
+            }
+
+            tx.setAmount(actualPaidAmount);
             tx.setTransactionCode(mpesaCode);
             tx.setMpesaReceiptNumber(mpesaCode);
             tx.setStatus("SUCCESS");
@@ -436,6 +483,21 @@ public class PaymentService {
                     .cancelled(false)
                     .build();
             receiptRepository.save(receipt);
+
+            // Notify student via email
+            final String finalReceiptNumber = receiptNumber;
+            final String finalMpesaCode = mpesaCode;
+            studentRepository.findById(tx.getStudentId()).ifPresent(student -> {
+                if (student.getEmail() != null && !student.getEmail().isBlank()) {
+                    emailService.sendPaymentReceiptEmail(
+                            student.getEmail(),
+                            student.getFullName(),
+                            finalReceiptNumber,
+                            tx.getAmount(),
+                            finalMpesaCode
+                    );
+                }
+            });
 
             // Reconcile Invoice Balance & Allocation
             if (tx.getInvoiceId() != null) {
@@ -505,7 +567,22 @@ public class PaymentService {
 
         } else {
             tx.setStatus("FAILED");
+            tx.setResultCode(String.valueOf(resultCode));
+            tx.setResultDesc(resultDesc != null ? resultDesc : "M-Pesa transaction was cancelled by user or rejected by provider");
             mpesaTransactionRepository.save(tx);
+
+            auditService.recordEvent(
+                    tx.getInstitutionId(),
+                    "SYSTEM_MPESA_WEBHOOK",
+                    "SAFARICOM_DARAJA",
+                    "PAYMENT_MPESA_CALLBACK_FAILED",
+                    "MPESA_TRANSACTION",
+                    tx.getId(),
+                    "FAILED",
+                    null, null, checkoutRequestId,
+                    "M-Pesa transaction failed. ResultCode: " + resultCode + ", Reason: " + resultDesc,
+                    null, null
+            );
         }
 
         return true;

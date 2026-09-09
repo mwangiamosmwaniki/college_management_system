@@ -62,4 +62,14 @@ export const financeApi = {
       body: JSON.stringify(payload),
     });
   },
+
+  runReconciliation: async (): Promise<ApiResponse<any>> => {
+    return apiClient<any>('/api/v1/finance/reconciliation/run', {
+      method: 'POST',
+    });
+  },
+
+  getReconciliationReport: async (): Promise<ApiResponse<any>> => {
+    return apiClient<any>('/api/v1/finance/reconciliation/report');
+  },
 };
