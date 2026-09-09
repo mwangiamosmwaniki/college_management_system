@@ -2,12 +2,16 @@ package ke.college.management.finance;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.common.PageResponse;
-import ke.college.management.exceptions.ResourceNotFoundException;
+import ke.college.management.finance.dto.CreateInvoiceRequest;
+import ke.college.management.finance.dto.RecordPaymentRequest;
+import ke.college.management.finance.entity.FinancialLedger;
 import ke.college.management.finance.entity.Invoice;
 import ke.college.management.finance.entity.MpesaTransaction;
 import ke.college.management.finance.entity.Payment;
+import ke.college.management.finance.entity.Receipt;
 import ke.college.management.finance.repository.InvoiceRepository;
 import ke.college.management.finance.repository.PaymentRepository;
 import ke.college.management.security.SecurityUtils;
@@ -32,7 +36,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/finance")
 @RequiredArgsConstructor
-@Tag(name = "Finance & Bursary", description = "Server-controlled student invoicing, payments, and M-Pesa gateway reconciliation")
+@Tag(name = "Finance & Bursary", description = "Server-controlled student invoicing, payments, ledger, and M-Pesa gateway reconciliation")
 public class FinanceController {
 
     private final InvoiceRepository invoiceRepository;
@@ -40,6 +44,7 @@ public class FinanceController {
     private final PaymentService paymentService;
 
     @GetMapping("/invoices")
+    @PreAuthorize("hasAuthority('FINANCE_VIEW') or hasRole('ADMIN')")
     @Operation(summary = "Get paginated institutional fee invoices")
     public ApiResponse<PageResponse<Invoice>> getInvoices(
             @RequestParam(defaultValue = "0") int page,
@@ -51,6 +56,22 @@ public class FinanceController {
         return ApiResponse.success(PageResponse.from(invoicePage));
     }
 
+    @PostMapping("/invoices")
+    @PreAuthorize("hasAuthority('FINANCE_MANAGE') or hasRole('ADMIN')")
+    @Operation(summary = "Authoritatively generate fee invoice and post to financial ledger")
+    public ApiResponse<Invoice> createInvoice(@Valid @RequestBody CreateInvoiceRequest request) {
+        Invoice invoice = paymentService.createInvoice(request);
+        return ApiResponse.success("Invoice generated successfully", invoice);
+    }
+
+    @PostMapping("/invoices/{id}/cancel")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('FINANCE_MANAGE')")
+    @Operation(summary = "Cancel unpaid invoice and reverse fee charges in ledger")
+    public ApiResponse<Invoice> cancelInvoice(@PathVariable String id, @RequestParam(defaultValue = "Administrative cancellation") String reason) {
+        Invoice invoice = paymentService.cancelInvoice(id, reason);
+        return ApiResponse.success("Invoice cancelled and fee charges reversed", invoice);
+    }
+
     @GetMapping("/invoices/student/{studentId}")
     @Operation(summary = "Get fee invoices for student")
     public ApiResponse<List<Invoice>> getStudentInvoices(@PathVariable String studentId) {
@@ -58,9 +79,29 @@ public class FinanceController {
     }
 
     @GetMapping("/payments/student/{studentId}")
-    @Operation(summary = "Get payment history and receipts for student")
+    @Operation(summary = "Get payment history for student")
     public ApiResponse<List<Payment>> getStudentPayments(@PathVariable String studentId) {
         return ApiResponse.success(paymentRepository.findByStudentId(studentId));
+    }
+
+    @PostMapping("/payments/record-manual")
+    @PreAuthorize("hasAuthority('FINANCE_MANAGE') or hasRole('ADMIN')")
+    @Operation(summary = "Record verified manual payment (Bank transfer, cheque, cash)")
+    public ApiResponse<Payment> recordManualPayment(@Valid @RequestBody RecordPaymentRequest request) {
+        Payment payment = paymentService.recordManualPayment(request);
+        return ApiResponse.success("Payment recorded and receipt generated", payment);
+    }
+
+    @GetMapping("/ledger/student/{studentId}")
+    @Operation(summary = "Get immutable accounting ledger entries for student")
+    public ApiResponse<List<FinancialLedger>> getStudentLedger(@PathVariable String studentId) {
+        return ApiResponse.success(paymentService.getStudentLedger(studentId));
+    }
+
+    @GetMapping("/receipts/student/{studentId}")
+    @Operation(summary = "Get authoritative receipts for student")
+    public ApiResponse<List<Receipt>> getStudentReceipts(@PathVariable String studentId) {
+        return ApiResponse.success(paymentService.getStudentReceipts(studentId));
     }
 
     @PostMapping("/payments/mpesa/stk-push")
@@ -74,6 +115,13 @@ public class FinanceController {
                 request.getAccountReference()
         );
         return ApiResponse.success("M-Pesa payment prompt dispatched to " + tx.getPhoneNumber(), tx);
+    }
+
+    @GetMapping("/mpesa/{id}")
+    @Operation(summary = "Get status of an M-Pesa payment transaction")
+    public ApiResponse<MpesaTransaction> getMpesaTransaction(@PathVariable String id) {
+        MpesaTransaction tx = paymentService.getTransaction(id);
+        return ApiResponse.success(tx);
     }
 
     @PostMapping("/payments/mpesa/callback")

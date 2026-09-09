@@ -1,23 +1,17 @@
 package ke.college.management.auth.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
+public class ForgotPasswordRequest {
 
-    private String userId;
+    @NotBlank(message = "Identifier or email is required")
     private String identifier;
-    private String email;
-    private String fullName;
-    private String institutionId;
-    private List<String> roles;
-    private List<String> permissions;
 }

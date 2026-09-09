@@ -27,11 +27,21 @@ async function proxyRequest(req: NextRequest, { path }: { path: string[] }) {
   const searchParams = req.nextUrl.searchParams.toString();
   const targetUrl = `${BACKEND_URL}/api/v1/${targetPath}${searchParams ? `?${searchParams}` : ''}`;
 
+  const SAFE_HEADERS = new Set([
+    'content-type',
+    'accept',
+    'cookie',
+    'user-agent',
+    'x-forwarded-for',
+    'x-forwarded-proto',
+    'x-request-id',
+  ]);
+
   const headers: Record<string, string> = {};
   req.headers.forEach((value, key) => {
-    // Forward relevant headers including cookies and authorization
-    if (!['host', 'connection', 'content-length'].includes(key.toLowerCase())) {
-      headers[key] = value;
+    const lowerKey = key.toLowerCase();
+    if (SAFE_HEADERS.has(lowerKey)) {
+      headers[lowerKey] = value;
     }
   });
 

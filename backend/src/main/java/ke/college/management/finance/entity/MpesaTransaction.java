@@ -51,9 +51,15 @@ public class MpesaTransaction {
     @Column(name = "transaction_code", length = 64)
     private String transactionCode;
 
+    @Column(name = "mpesa_receipt_number", length = 64)
+    private String mpesaReceiptNumber;
+
+    @Column(name = "transaction_date")
+    private Instant transactionDate;
+
     @Column(length = 32)
     @Builder.Default
-    private String status = "PENDING"; // PENDING, COMPLETED, FAILED, TIMEOUT
+    private String status = "PENDING"; // INITIATED, PENDING, SUCCESS, FAILED, CANCELLED, REVERSED
 
     @Column(name = "result_code", length = 32)
     private String resultCode;

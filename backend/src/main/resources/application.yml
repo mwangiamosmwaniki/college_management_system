@@ -50,6 +50,12 @@ spring:
       password: ${REDIS_PASSWORD:}
       timeout: 2000ms
 
+  session:
+    store-type: ${SESSION_STORE_TYPE:redis}
+    redis:
+      namespace: spring:session:college_erp
+      flush-mode: on_save
+
   mail:
     host: ${MAIL_HOST:smtp.mailtrap.io}
     port: ${MAIL_PORT:2525}

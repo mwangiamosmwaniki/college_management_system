@@ -63,7 +63,7 @@ public class SecurityConfig {
                 // Public Documentation & Health
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/actuator/health", "/actuator/info").permitAll()
                 // Public Authentication & Payment Callback endpoints
-                .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/payments/mpesa/callback").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/documents/verify/**").permitAll()
                 // All other business API endpoints require authentication

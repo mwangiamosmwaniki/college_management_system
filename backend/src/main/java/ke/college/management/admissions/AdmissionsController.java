@@ -7,13 +7,17 @@ import ke.college.management.admissions.repository.ApplicationRepository;
 import ke.college.management.audit.AuditService;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.common.PageResponse;
+import ke.college.management.exceptions.BadRequestException;
 import ke.college.management.exceptions.ResourceNotFoundException;
 import ke.college.management.security.SecurityUtils;
+import ke.college.management.students.entity.Student;
+import ke.college.management.students.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -30,11 +36,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admissions")
 @RequiredArgsConstructor
-@Tag(name = "Admissions", description = "Student applications, review workflows and admission decisions")
+@Tag(name = "Admissions", description = "Student applications, review workflows, decisions and admission enrollment")
 public class AdmissionsController {
 
     private final ApplicationRepository applicationRepository;
+    private final StudentRepository studentRepository;
     private final AuditService auditService;
+
+    private final SecureRandom secureRandom = new SecureRandom();
 
     @GetMapping("/applications")
     @PreAuthorize("hasAuthority('STUDENT_VIEW') or hasRole('ADMIN')")
@@ -55,7 +64,8 @@ public class AdmissionsController {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
         app.setId("app_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16));
         app.setInstitutionId(institutionId);
-        app.setReferenceNumber("APP-" + LocalDate.now().getYear() + "-" + (1000 + (int)(Math.random() * 8999)));
+        int randomCode = 1000 + secureRandom.nextInt(9000);
+        app.setReferenceNumber("APP-" + LocalDate.now().getYear() + "-" + randomCode);
         app.setStatus("SUBMITTED");
         app.setCreatedAt(Instant.now());
         app.setUpdatedAt(Instant.now());
@@ -114,5 +124,60 @@ public class AdmissionsController {
         );
 
         return ApiResponse.success("Decision updated to " + status, saved);
+    }
+
+    @PostMapping("/applications/{id}/accept-offer")
+    @Transactional
+    @Operation(summary = "Accept admission offer and officially matriculate student record into the institution")
+    public ApiResponse<Student> acceptOffer(@PathVariable String id) {
+        Application app = applicationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+
+        SecurityUtils.validateTenantAccess(app.getInstitutionId());
+
+        if (!"APPROVED".equalsIgnoreCase(app.getStatus())) {
+            throw new BadRequestException("Application status must be APPROVED before offer can be accepted. Current status: " + app.getStatus());
+        }
+
+        // Generate authoritative admission number
+        int randomSuffix = 1000 + secureRandom.nextInt(9000);
+        String admissionNumber = "ADM/" + LocalDate.now().getYear() + "/" + randomSuffix;
+
+        Student student = Student.builder()
+                .id("stu_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16))
+                .institutionId(app.getInstitutionId())
+                .campusId("camp_nairobi_01")
+                .programId(app.getProgramId())
+                .admissionNumber(admissionNumber)
+                .fullName(app.getFullName())
+                .email(app.getEmail())
+                .phoneNumber(app.getPhoneNumber())
+                .nationalId(app.getNationalId())
+                .status("ACTIVE")
+                .feeBalance(BigDecimal.ZERO)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+
+        Student savedStudent = studentRepository.save(student);
+
+        app.setStatus("ADMITTED");
+        app.setUpdatedAt(Instant.now());
+        applicationRepository.save(app);
+
+        auditService.recordEvent(
+                app.getInstitutionId(),
+                savedStudent.getId(),
+                admissionNumber,
+                "STUDENT_ADMITTED",
+                "STUDENT",
+                savedStudent.getId(),
+                "SUCCESS",
+                null, null, null,
+                "Student matriculated from application " + app.getReferenceNumber() + " with Admission No: " + admissionNumber,
+                "APPROVED", "ADMITTED"
+        );
+
+        return ApiResponse.success("Offer accepted and student enrolled with Admission Number: " + admissionNumber, savedStudent);
     }
 }

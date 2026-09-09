@@ -55,6 +55,18 @@ public class StudentController {
         return ApiResponse.success(PageResponse.from(studentPage));
     }
 
+    @GetMapping("/me")
+    @Operation(summary = "Get current logged-in student profile")
+    public ApiResponse<Student> getMyStudentProfile() {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
+
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
+
+        return ApiResponse.success(student);
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get single student with IDOR ownership validation")
     public ApiResponse<Student> getStudentById(@PathVariable String id) {
@@ -71,7 +83,7 @@ public class StudentController {
                                a.getAuthority().startsWith("ROLE_FINANCE") ||
                                a.getAuthority().startsWith("ROLE_DEAN"));
 
-        if (!isStaff && !student.getUserId().equals(currentUser.getId())) {
+        if (!isStaff && (student.getUserId() == null || !student.getUserId().equals(currentUser.getId()))) {
             throw new UnauthorizedException("IDOR Violation: Access denied to student record " + id);
         }
 
