@@ -15,6 +15,10 @@ public interface StudentRepository extends JpaRepository<Student, String> {
 
     Optional<Student> findByInstitutionIdAndId(String institutionId, String id);
 
+    Optional<Student> findByIdAndInstitutionId(String id, String institutionId);
+
+    List<Student> findByInstitutionId(String institutionId);
+
     Optional<Student> findByInstitutionIdAndAdmissionNumber(String institutionId, String admissionNumber);
 
     Optional<Student> findByUserId(String userId);

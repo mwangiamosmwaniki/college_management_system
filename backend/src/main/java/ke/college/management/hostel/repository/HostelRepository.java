@@ -10,4 +10,6 @@ import java.util.List;
 public interface HostelRepository extends JpaRepository<Hostel, String> {
 
     List<Hostel> findByInstitutionId(String institutionId);
+
+    java.util.Optional<Hostel> findByIdAndInstitutionId(String id, String institutionId);
 }

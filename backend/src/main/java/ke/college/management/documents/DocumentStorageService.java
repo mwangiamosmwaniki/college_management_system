@@ -145,6 +145,64 @@ public class DocumentStorageService {
     }
 
     /**
+     * Stores a server-generated document (e.g. Admission Letter PDF) with authoritative SHA-256
+     */
+    @Transactional
+    public DocumentRecord storeGeneratedDocument(
+            byte[] fileBytes,
+            String documentType,
+            String studentId,
+            String title,
+            String mimeType,
+            String institutionId,
+            String currentUserId
+    ) {
+        if (fileBytes == null || fileBytes.length == 0) {
+            throw new BadRequestException("Document content cannot be empty");
+        }
+
+        String sha256 = calculateSha256(fileBytes);
+        String safeTitle = title != null && !title.isBlank() ? title.replaceAll("[^a-zA-Z0-9._-]", "_") : "doc";
+        String fileKey = String.format("%s/%s/%s_%s.pdf", institutionId, documentType.toLowerCase(), UUID.randomUUID().toString().substring(0, 8), safeTitle);
+        String verificationCode = "VER-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
+
+        storeInS3(fileKey, fileBytes, mimeType != null ? mimeType : "application/pdf");
+
+        DocumentRecord record = DocumentRecord.builder()
+                .id("doc_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16))
+                .institutionId(institutionId)
+                .documentType(documentType)
+                .studentId(studentId)
+                .title(title)
+                .fileKey(fileKey)
+                .fileSize((long) fileBytes.length)
+                .mimeType(mimeType != null ? mimeType : "application/pdf")
+                .hashSha256(sha256)
+                .verificationCode(verificationCode)
+                .isVerified(true)
+                .createdBy(currentUserId != null ? currentUserId : "SYSTEM")
+                .createdAt(Instant.now())
+                .build();
+
+        DocumentRecord saved = documentRepository.save(record);
+
+        auditService.recordEvent(
+                institutionId,
+                currentUserId != null ? currentUserId : "SYSTEM",
+                "DOCUMENT_ENGINE",
+                "DOCUMENT_GENERATE",
+                "DOCUMENT",
+                saved.getId(),
+                "SUCCESS",
+                null, null, null,
+                "Generated authoritative document: " + title + " (" + documentType + ") with SHA-256 " + sha256,
+                null, null
+        );
+
+        return saved;
+    }
+
+    /**
      * Generates an AWS Signature Version 4 pre-signed GET URL for secure direct client download
      */
     public String generatePresignedUrl(String documentId, Duration expiration) {

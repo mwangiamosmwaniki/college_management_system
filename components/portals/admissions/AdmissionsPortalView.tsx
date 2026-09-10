@@ -140,16 +140,26 @@ export function AdmissionsPortalView() {
   };
 
   const handleMatriculate = async (cand: typeof candidates[0]) => {
-    const matricNo = `MAT/2026/${cand.id.split('-')[2]}`;
+    let matricNo = `ADM/2026/${cand.id.split('-')[2] || '000001'}`;
+
+    try {
+      try {
+        await admissionsApi.acceptOffer(cand.id);
+      } catch {
+        // Offer may already be accepted or candidate is mock
+      }
+
+      const res = await admissionsApi.matriculateApplicant(cand.id);
+      if (res.data?.admissionNumber) {
+        matricNo = res.data.admissionNumber;
+      }
+    } catch {
+      // Graceful fallback for mock candidate
+    }
+
     setCandidates(prev =>
       prev.map(c => (c.id === cand.id ? { ...c, status: 'ADMITTED', matricGenerated: true } : c))
     );
-
-    try {
-      await admissionsApi.matriculateApplicant(cand.id);
-    } catch {
-      // Graceful fallback if offline or mock candidate
-    }
 
     publishCrossPortalEvent(
       'APPLICANT_MATRICULATED',

@@ -167,10 +167,11 @@ interface ERPContextType {
   setIsLoginModalOpen: (open: boolean) => void;
   loginTargetPortal: PortalId | 'STAFF' | null;
   openLoginModal: (target?: PortalId | 'STAFF') => void;
+  loginUser: (user: UserIdentity, targetPortal?: PortalId | 'STAFF', defaultTab?: string) => boolean;
   logout: () => void;
 
   // Interactive Actions
-  navigateToPortal: (portalId: PortalId, defaultTab?: string) => boolean;
+  navigateToPortal: (portalId: PortalId, defaultTab?: string, overrideUser?: UserIdentity) => boolean;
   logAction: (portalId: PortalId, action: string, resource: string, status: 'GRANTED' | 'DENIED' | 'FLAGGED', details: string) => void;
   
   // Student Portal Actions
@@ -342,9 +343,14 @@ export function ERPProvider({ children }: { children: ReactNode }) {
     setAuditLogs(prev => [entry, ...prev]);
   };
 
-  const navigateToPortal = (portalId: PortalId, defaultTab: string = 'dashboard'): boolean => {
+  const navigateToPortal = (
+    portalId: PortalId,
+    defaultTab: string = 'dashboard',
+    overrideUser?: UserIdentity
+  ): boolean => {
     setIsMobileSidebarOpen(false);
-    const access = evaluatePortalAccess(currentUser, portalId, roles);
+    const userToEvaluate = overrideUser || currentUser;
+    const access = evaluatePortalAccess(userToEvaluate, portalId, roles);
     if (access.allowed) {
       setActivePortalId(portalId);
       setActiveNavTab(defaultTab);
@@ -354,6 +360,47 @@ export function ERPProvider({ children }: { children: ReactNode }) {
       logAction(portalId, 'ACCESS_BLOCKED', `Attempted portal ${portalId}`, 'DENIED', access.reason);
       return false;
     }
+  };
+
+  const loginUser = (
+    user: UserIdentity,
+    targetPortal?: PortalId | 'STAFF',
+    defaultTab: string = 'dashboard'
+  ): boolean => {
+    setCurrentUser(user);
+    setIsLoginModalOpen(false);
+    setIsMobileSidebarOpen(false);
+
+    let resolvedPortal: PortalId =
+      (targetPortal && targetPortal !== 'STAFF' ? targetPortal : null) ||
+      user.portalAssignments[0]?.portalId ||
+      'STUDENT';
+
+    // Verify user has access to target, fallback to first allowed
+    const checkTarget = evaluatePortalAccess(user, resolvedPortal, roles);
+    if (!checkTarget.allowed) {
+      const firstAllowed = user.portalAssignments.find(
+        (a) => evaluatePortalAccess(user, a.portalId, roles).allowed
+      );
+      resolvedPortal = firstAllowed ? firstAllowed.portalId : (user.portalAssignments[0]?.portalId || 'STUDENT');
+    }
+
+    setActivePortalId(resolvedPortal);
+    setActiveNavTab(defaultTab);
+
+    const assignment = user.portalAssignments.find((a) => a.portalId === resolvedPortal);
+    const roleName = assignment ? assignment.roleName : 'Unassigned';
+    const entry = createAuditLog(
+      user,
+      resolvedPortal,
+      roleName,
+      'LOGIN_AUTH',
+      `Session established`,
+      'GRANTED',
+      `User authenticated as ${user.identifier} and redirected to ${resolvedPortal} portal.`
+    );
+    setAuditLogs((prev) => [entry, ...prev]);
+    return true;
   };
 
   // Student Portal Actions
@@ -1552,12 +1599,14 @@ export function ERPProvider({ children }: { children: ReactNode }) {
       setIsLoginModalOpen,
       loginTargetPortal,
       openLoginModal,
+      loginUser,
       logout
     }),
     [
       currentUser,
       activePortalId,
       activeNavTab,
+      loginUser,
       portals,
       roles,
       users,

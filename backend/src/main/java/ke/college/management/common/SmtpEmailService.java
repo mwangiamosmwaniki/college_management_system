@@ -118,6 +118,38 @@ public class SmtpEmailService implements EmailService {
     }
 
     @Override
+    public void sendAccountActivationEmail(String toEmail, String fullName, String admissionNumber, String activationLink) {
+        String subject = "Action Required: Activate Your Student Portal Account";
+        String htmlContent = """
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"></head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background-color: #1e3a8a; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                    <h2 style="color: #ffffff; margin: 0;">Institutional Student Enrollment</h2>
+                </div>
+                <div style="padding: 24px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; background-color: #ffffff;">
+                    <p>Dear <strong>%s</strong>,</p>
+                    <p>Congratulations on your official enrollment! Your admission details are as follows:</p>
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin: 20px 0;">
+                        <p style="margin: 4px 0; color: #0f172a;"><strong>Official Admission Number:</strong> %s</p>
+                    </div>
+                    <p>For your security, please activate your account and create your private password using the single-use link below. This activation link expires in 48 hours.</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="%s" style="background-color: #1e3a8a; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Activate My Account</a>
+                    </div>
+                    <p style="font-size: 13px; color: #64748b;">Notice: Never share your activation link with anyone. Once activated, you can access course registrations, fee statements, and institutional documents.</p>
+                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                    <p style="font-size: 11px; color: #94a3b8; text-align: center;">Office of the Registrar (Academic Affairs) &bull; Institutional ERP Portal</p>
+                </div>
+            </body>
+            </html>
+            """.formatted(escapeHtml(fullName), escapeHtml(admissionNumber), activationLink);
+
+        sendEmail(toEmail, subject, htmlContent);
+    }
+
+    @Override
     public void sendPaymentReceiptEmail(String toEmail, String fullName, String receiptNumber, BigDecimal amount, String transactionRef) {
         String subject = "Payment Receipt: " + receiptNumber;
         String htmlContent = """

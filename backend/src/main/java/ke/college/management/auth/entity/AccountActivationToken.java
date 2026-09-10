@@ -1,4 +1,4 @@
-package ke.college.management.institutions.entity;
+package ke.college.management.auth.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,12 +12,12 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 
 @Entity
-@Table(name = "campuses")
+@Table(name = "account_activation_tokens")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Campus {
+public class AccountActivationToken {
 
     @Id
     @Column(length = 64)
@@ -26,23 +26,20 @@ public class Campus {
     @Column(name = "institution_id", nullable = false, length = 64)
     private String institutionId;
 
-    @Column(nullable = false, length = 32)
-    private String code;
+    @Column(name = "user_id", nullable = false, length = 64)
+    private String userId;
 
-    @Column(nullable = false, length = 255)
-    private String name;
+    @Column(name = "token_hash", nullable = false, unique = true, length = 255)
+    private String tokenHash;
 
-    @Column(length = 255)
-    private String location;
+    @Column(name = "expires_at", nullable = false)
+    private Instant expiresAt;
 
-    @Column(name = "director_name", length = 128)
-    private String directorName;
-
-    @Column(name = "is_active")
+    @Column(name = "used", nullable = false)
     @Builder.Default
-    private Boolean isActive = true;
+    private boolean used = false;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
 }

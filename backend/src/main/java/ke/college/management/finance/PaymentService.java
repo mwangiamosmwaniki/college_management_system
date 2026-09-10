@@ -304,6 +304,8 @@ public class PaymentService {
 
     /**
      * STK Push Initiation (M-Pesa)
+     * Durable state machine: INITIATING -> PENDING -> SUCCESS / FAILED / GATEWAY_ERROR
+     * Transaction is persisted in database BEFORE external Daraja call.
      */
     @Transactional
     public MpesaTransaction initiateMpesaStkPush(
@@ -329,51 +331,71 @@ public class PaymentService {
 
         String accRef = accountReference != null && !accountReference.isBlank() ? accountReference : "FEE-" + studentId;
 
-        // Execute real Daraja STK Push
-        DarajaService.StkPushResult pushResult = darajaService.initiateStkPush(
-                sanitizedPhone,
-                amount,
-                accRef,
-                "Institutional Fee Payment"
-        );
-
-        if (!pushResult.isSuccess()) {
-            throw new BadRequestException(pushResult.getResponseDescription() != null
-                    ? pushResult.getResponseDescription()
-                    : "M-Pesa gateway rejected the transaction initiation request");
-        }
-
+        // Persist transaction BEFORE the external Daraja call: state = INITIATING
         MpesaTransaction tx = MpesaTransaction.builder()
                 .id("tx_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16))
                 .institutionId(institutionId)
                 .studentId(studentId)
                 .invoiceId(invoiceId)
-                .merchantRequestId(pushResult.getMerchantRequestId())
-                .checkoutRequestId(pushResult.getCheckoutRequestId())
                 .phoneNumber(sanitizedPhone)
                 .amount(amount)
                 .accountReference(accRef)
-                .status("PENDING")
+                .status("INITIATING")
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build();
 
-        MpesaTransaction saved = mpesaTransactionRepository.save(tx);
+        MpesaTransaction persistedTx = mpesaTransactionRepository.save(tx);
 
-        auditService.recordEvent(
-                institutionId,
-                SecurityUtils.getCurrentUserId(),
-                SecurityUtils.getCurrentUserDetails().getIdentifier(),
-                "PAYMENT_MPESA_INITIATE",
-                "MPESA_TRANSACTION",
-                saved.getId(),
-                "PENDING",
-                null, null, null,
-                "STK Push initiated for KES " + amount + " to " + sanitizedPhone,
-                null, null
-        );
+        try {
+            // Execute real Daraja STK Push
+            DarajaService.StkPushResult pushResult = darajaService.initiateStkPush(
+                    sanitizedPhone,
+                    amount,
+                    accRef,
+                    "Institutional Fee Payment"
+            );
 
-        return saved;
+            if (!pushResult.isSuccess()) {
+                persistedTx.setStatus("GATEWAY_ERROR");
+                persistedTx.setResultDesc(pushResult.getResponseDescription() != null
+                        ? pushResult.getResponseDescription()
+                        : "M-Pesa gateway rejected the transaction initiation request");
+                persistedTx.setUpdatedAt(Instant.now());
+                mpesaTransactionRepository.save(persistedTx);
+
+                throw new BadRequestException(persistedTx.getResultDesc());
+            }
+
+            persistedTx.setMerchantRequestId(pushResult.getMerchantRequestId());
+            persistedTx.setCheckoutRequestId(pushResult.getCheckoutRequestId());
+            persistedTx.setStatus("PENDING");
+            persistedTx.setUpdatedAt(Instant.now());
+            MpesaTransaction saved = mpesaTransactionRepository.save(persistedTx);
+
+            auditService.recordEvent(
+                    institutionId,
+                    SecurityUtils.getCurrentUserId(),
+                    SecurityUtils.getCurrentUserDetails().getIdentifier(),
+                    "PAYMENT_MPESA_INITIATE",
+                    "MPESA_TRANSACTION",
+                    saved.getId(),
+                    "PENDING",
+                    null, null, null,
+                    "STK Push initiated for KES " + amount + " to " + sanitizedPhone + " (CheckoutRequestID: " + pushResult.getCheckoutRequestId() + ")",
+                    "INITIATING", "PENDING"
+            );
+
+            return saved;
+        } catch (BadRequestException bre) {
+            throw bre;
+        } catch (Exception ex) {
+            persistedTx.setStatus("GATEWAY_ERROR");
+            persistedTx.setResultDesc("Gateway communication failure: " + ex.getMessage());
+            persistedTx.setUpdatedAt(Instant.now());
+            mpesaTransactionRepository.save(persistedTx);
+            throw new BadRequestException("M-Pesa gateway communication error: " + ex.getMessage());
+        }
     }
 
     /**
@@ -440,7 +462,11 @@ public class PaymentService {
                 mpesaCode = String.valueOf(stkCallback.get("MpesaReceiptNumber")).trim();
             }
             if (mpesaCode == null || mpesaCode.isBlank()) {
-                mpesaCode = checkoutRequestId;
+                log.error("M-Pesa callback for checkoutRequestId {} contains no valid MpesaReceiptNumber. Rejecting without manufacturing receipt.", checkoutRequestId);
+                tx.setStatus("FAILED");
+                tx.setResultDesc("Callback lacked authoritative Safaricom M-Pesa receipt number");
+                mpesaTransactionRepository.save(tx);
+                return false;
             }
 
             tx.setAmount(actualPaidAmount);
@@ -604,5 +630,48 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public List<Receipt> getStudentReceipts(String studentId) {
         return receiptRepository.findByStudentId(studentId);
+    }
+
+    /**
+     * Reconciliation job: query Safaricom for PENDING transactions older than 2 minutes
+     */
+    @Transactional
+    public int reconcilePendingMpesaTransactions() {
+        Instant cutoff = Instant.now().minusSeconds(120);
+        List<MpesaTransaction> pendingTxs = mpesaTransactionRepository.findByStatusAndCreatedAtBefore("PENDING", cutoff);
+        int reconciledCount = 0;
+
+        for (MpesaTransaction tx : pendingTxs) {
+            if (tx.getCheckoutRequestId() == null || tx.getCheckoutRequestId().isBlank()) {
+                tx.setStatus("FAILED");
+                tx.setResultDesc("Missing CheckoutRequestId from initiation");
+                tx.setUpdatedAt(Instant.now());
+                mpesaTransactionRepository.save(tx);
+                reconciledCount++;
+                continue;
+            }
+
+            try {
+                DarajaService.StkQueryResult queryResult = darajaService.queryStkStatus(tx.getCheckoutRequestId());
+                String code = queryResult.getResultCode();
+                if ("1032".equals(code) || "1037".equals(code) || "1".equals(code)) {
+                    tx.setStatus("FAILED");
+                    tx.setResultCode(code);
+                    tx.setResultDesc(queryResult.getResultDesc() != null ? queryResult.getResultDesc() : "Transaction cancelled or timed out");
+                    tx.setUpdatedAt(Instant.now());
+                    mpesaTransactionRepository.save(tx);
+                    reconciledCount++;
+                } else if (tx.getCreatedAt().isBefore(Instant.now().minusSeconds(600))) {
+                    tx.setStatus("FAILED");
+                    tx.setResultDesc("M-Pesa transaction timed out without confirmation from provider");
+                    tx.setUpdatedAt(Instant.now());
+                    mpesaTransactionRepository.save(tx);
+                    reconciledCount++;
+                }
+            } catch (Exception ex) {
+                log.warn("M-Pesa reconciliation query note for tx {}: {}", tx.getId(), ex.getMessage());
+            }
+        }
+        return reconciledCount;
     }
 }

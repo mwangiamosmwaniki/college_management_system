@@ -30,4 +30,18 @@ export const authApi = {
       method: 'POST',
     });
   },
+
+  activateAccount: async (token: string, password: string): Promise<ApiResponse<void>> => {
+    return apiClient<void>('/api/v1/auth/activate-account', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<ApiResponse<void>> => {
+    return apiClient<void>('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    });
+  },
 };

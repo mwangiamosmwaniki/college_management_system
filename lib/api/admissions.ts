@@ -34,6 +34,18 @@ export const admissionsApi = {
     });
   },
 
+  startReview: async (id: string): Promise<ApiResponse<ApplicationDto>> => {
+    return apiClient<ApplicationDto>(`/api/v1/admissions/applications/${id}/review`, {
+      method: 'PUT',
+    });
+  },
+
+  acceptOffer: async (id: string): Promise<ApiResponse<ApplicationDto>> => {
+    return apiClient<ApplicationDto>(`/api/v1/admissions/applications/${id}/accept-offer`, {
+      method: 'POST',
+    });
+  },
+
   matriculateApplicant: async (applicationId: string, campusId?: string, termId?: string): Promise<ApiResponse<any>> => {
     const query = new URLSearchParams();
     if (campusId) query.append('campusId', campusId);

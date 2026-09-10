@@ -10,6 +10,7 @@ import java.util.Optional;
 @Repository
 public interface CampusRepository extends JpaRepository<Campus, String> {
     List<Campus> findByInstitutionId(String institutionId);
+    List<Campus> findByInstitutionIdAndIsActiveTrue(String institutionId);
     Optional<Campus> findByInstitutionIdAndCode(String institutionId, String code);
     Optional<Campus> findFirstByInstitutionIdOrderByCreatedAtAsc(String institutionId);
 }

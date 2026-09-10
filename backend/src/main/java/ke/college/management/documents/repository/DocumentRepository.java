@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface DocumentRepository extends JpaRepository<DocumentRecord, String> {
     Optional<DocumentRecord> findByVerificationCode(String verificationCode);
+    Optional<DocumentRecord> findByIdAndInstitutionId(String id, String institutionId);
     Page<DocumentRecord> findByInstitutionId(String institutionId, Pageable pageable);
     Page<DocumentRecord> findByStudentId(String studentId, Pageable pageable);
     List<DocumentRecord> findByInstitutionId(String institutionId);

@@ -5,13 +5,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import ke.college.management.audit.AuditService;
+import ke.college.management.auth.dto.ActivateAccountRequest;
 import ke.college.management.auth.dto.AuthResponse;
 import ke.college.management.auth.dto.ChangePasswordRequest;
 import ke.college.management.auth.dto.ForgotPasswordRequest;
 import ke.college.management.auth.dto.LoginRequest;
 import ke.college.management.auth.dto.ResetPasswordRequest;
 import ke.college.management.auth.dto.UserDto;
+import ke.college.management.auth.entity.AccountActivationToken;
 import ke.college.management.auth.entity.PasswordResetToken;
+import ke.college.management.auth.repository.AccountActivationTokenRepository;
 import ke.college.management.auth.repository.PasswordResetTokenRepository;
 import ke.college.management.common.EmailService;
 import ke.college.management.exceptions.BadRequestException;
@@ -56,6 +59,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final AccountActivationTokenRepository accountActivationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
     private final RateLimiterService rateLimiterService;
@@ -374,6 +378,92 @@ public class AuthService {
                 null,
                 null
         );
+    }
+
+    /**
+     * Generates a single-use cryptographically secure activation token for a newly admitted student.
+     * Only the SHA-256 hash is persisted in the database.
+     */
+    @Transactional
+    public String createAccountActivationToken(String institutionId, String userId) {
+        byte[] randomBytes = new byte[32];
+        secureRandom.nextBytes(randomBytes);
+        String rawToken = HexFormat.of().formatHex(randomBytes);
+        String tokenHash = hashToken(rawToken);
+
+        AccountActivationToken token = AccountActivationToken.builder()
+                .id("act_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16))
+                .institutionId(institutionId)
+                .userId(userId)
+                .tokenHash(tokenHash)
+                .expiresAt(Instant.now().plus(48, ChronoUnit.HOURS)) // 48-hour expiration window
+                .used(false)
+                .createdAt(Instant.now())
+                .build();
+
+        accountActivationTokenRepository.save(token);
+
+        auditService.recordEvent(
+                institutionId,
+                userId,
+                userId,
+                "AUTH_ACTIVATION_TOKEN_GENERATE",
+                "ACTIVATION_TOKEN",
+                token.getId(),
+                "SUCCESS",
+                null, null, null,
+                "Generated single-use student account activation token (expires in 48h)",
+                null, null
+        );
+
+        return rawToken;
+    }
+
+    /**
+     * Activates a student account using their single-use token and lets them establish their own password.
+     */
+    @Transactional
+    public void activateAccount(ActivateAccountRequest request, HttpServletRequest httpRequest) {
+        String tokenHash = hashToken(request.getToken().trim());
+        AccountActivationToken token = accountActivationTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new BadRequestException("Invalid or expired account activation token."));
+
+        if (token.isUsed()) {
+            throw new BadRequestException("Account activation token has already been used.");
+        }
+        if (Instant.now().isAfter(token.getExpiresAt())) {
+            throw new BadRequestException("Account activation token has expired. Please contact admissions.");
+        }
+
+        User user = userRepository.findById(token.getUserId())
+                .orElseThrow(() -> new BadRequestException("User associated with activation token not found."));
+
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setStatus("ACTIVE");
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        user.setUpdatedAt(Instant.now());
+        userRepository.save(user);
+
+        token.setUsed(true);
+        accountActivationTokenRepository.save(token);
+
+        auditService.recordEvent(
+                user.getInstitutionId(),
+                user.getId(),
+                user.getIdentifier(),
+                "AUTH_ACCOUNT_ACTIVATED",
+                "USER",
+                user.getId(),
+                "SUCCESS",
+                httpRequest != null ? httpRequest.getRemoteAddr() : "127.0.0.1",
+                httpRequest != null ? httpRequest.getHeader("User-Agent") : "System",
+                UUID.randomUUID().toString(),
+                "Student account successfully activated and password set by user.",
+                null, null
+        );
+
+        log.info("Student account {} ({}) successfully activated.", user.getId(), user.getIdentifier());
     }
 
     private String hashToken(String rawToken) {

@@ -54,6 +54,7 @@ class MpesaAndFinanceTests {
         stkCallback.put("CheckoutRequestID", checkoutId);
         stkCallback.put("ResultCode", 0);
         stkCallback.put("ResultDesc", "The service request is processed successfully.");
+        stkCallback.put("MpesaReceiptNumber", "NLJ7RT61SV");
         body.put("stkCallback", stkCallback);
         callbackPayload.put("Body", body);
 

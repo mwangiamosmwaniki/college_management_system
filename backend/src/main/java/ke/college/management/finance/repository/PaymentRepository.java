@@ -12,7 +12,9 @@ import java.util.Optional;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, String> {
     List<Payment> findByStudentId(String studentId);
+    List<Payment> findByInstitutionId(String institutionId);
     Page<Payment> findByInstitutionId(String institutionId, Pageable pageable);
+    Optional<Payment> findByIdAndInstitutionId(String id, String institutionId);
     Optional<Payment> findByInstitutionIdAndTransactionReference(String institutionId, String transactionReference);
     boolean existsByInstitutionIdAndTransactionReference(String institutionId, String transactionReference);
 }

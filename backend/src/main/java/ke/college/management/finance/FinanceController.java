@@ -132,6 +132,14 @@ public class FinanceController {
         return ApiResponse.success("Callback processed", Map.of("status", processed ? "ACCEPTED" : "IGNORED"));
     }
 
+    @PostMapping("/mpesa/reconcile-pending")
+    @PreAuthorize("hasAuthority('FINANCE_MANAGE') or hasRole('ADMIN')")
+    @Operation(summary = "Reconcile pending M-Pesa transactions against Safaricom Daraja gateway")
+    public ApiResponse<Map<String, Object>> reconcilePendingMpesa() {
+        int count = paymentService.reconcilePendingMpesaTransactions();
+        return ApiResponse.success("Pending M-Pesa transactions reconciled", Map.of("reconciledCount", count));
+    }
+
     @PostMapping("/reconciliation/run")
     @PreAuthorize("hasAuthority('FINANCE_MANAGE') or hasRole('ADMIN')")
     @Operation(summary = "Run authoritative financial reconciliation and audit discrepancy report")

@@ -33,7 +33,18 @@ export async function apiClient<T>(
       credentials: 'include', // Includes secure HTTP-only session cookie
     });
 
-    const data: ApiResponse<T> = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    let data: ApiResponse<T>;
+
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      const preview = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+      throw new Error(
+        `Institutional gateway returned non-JSON response (${response.status})${preview ? `: ${preview}` : ''}`
+      );
+    }
 
     if (!response.ok || !data.success) {
       throw new Error(data.message || `API request failed with status ${response.status}`);

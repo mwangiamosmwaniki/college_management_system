@@ -63,6 +63,8 @@ public class SecurityConfig {
                 .csrfTokenRepository(csrfRepository)
                 .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                 .ignoringRequestMatchers(
+                    "/api/auth",
+                    "/api/v1/auth/**",
                     "/api/v1/auth/login",
                     "/api/v1/auth/forgot-password",
                     "/api/v1/auth/reset-password",
@@ -74,15 +76,28 @@ public class SecurityConfig {
                     "/actuator/**"
                 )
             )
+            .formLogin(AbstractHttpConfigurer::disable)
+            .httpBasic(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"success\":false,\"message\":\"Institutional authentication required. Please log in.\",\"errors\":{\"auth\":\"UNAUTHORIZED\"}}");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(HttpStatus.FORBIDDEN.value());
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"success\":false,\"message\":\"Access Denied: Insufficient institutional permissions.\",\"errors\":{\"auth\":\"FORBIDDEN\"}}");
+                })
             )
             .authorizeHttpRequests(auth -> auth
                 // Public Documentation & Health
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/actuator/health", "/actuator/info").permitAll()
                 // Public Authentication & Payment Callback endpoints
-                .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth", "/api/v1/auth/**", "/api/v1/auth/login", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/payments/mpesa/callback").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/documents/verify/**").permitAll()

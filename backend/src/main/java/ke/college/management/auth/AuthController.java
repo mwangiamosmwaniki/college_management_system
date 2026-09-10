@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import ke.college.management.auth.dto.ActivateAccountRequest;
 import ke.college.management.auth.dto.AuthResponse;
 import ke.college.management.auth.dto.ChangePasswordRequest;
 import ke.college.management.auth.dto.ForgotPasswordRequest;
@@ -23,14 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping({"/api/v1/auth", "/api/auth"})
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "Institutional authentication and session endpoints")
 public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/login")
+    @PostMapping({"/login", "/auth"})
     @Operation(summary = "Authenticate user with institutional credentials and establish secure HTTP session")
     public ApiResponse<AuthResponse> login(
             @Valid @RequestBody LoginRequest request,
@@ -96,5 +97,15 @@ public class AuthController {
     ) {
         authService.resetPassword(request, httpRequest);
         return ApiResponse.success("Password reset successfully. You may now login.", null);
+    }
+
+    @PostMapping("/activate-account")
+    @Operation(summary = "Activate student account and set password using one-time activation token")
+    public ApiResponse<Void> activateAccount(
+            @Valid @RequestBody ActivateAccountRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        authService.activateAccount(request, httpRequest);
+        return ApiResponse.success("Account successfully activated. You may now login.", null);
     }
 }
