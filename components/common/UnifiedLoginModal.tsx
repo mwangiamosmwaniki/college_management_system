@@ -194,7 +194,15 @@ export function UnifiedLoginModal() {
         handleClose();
         return;
       }
-      setErrorMsg(err.message || 'Authentication failed. Please verify credentials.');
+      const safeMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : typeof err === 'string'
+          ? err
+          : 'Authentication failed. Please check your credentials and try again.';
+      setErrorMsg(safeMessage);
     } finally {
       setIsSubmitting(false);
     }
