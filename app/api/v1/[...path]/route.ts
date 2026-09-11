@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { INITIAL_USERS } from '@/lib/mock-data';
+import {
+  authenticateWithBackend,
+  getSessionFromRequest,
+  invalidateSession,
+  getStudentData,
+  getStudentInvoices,
+  getInstitutionalUserList
+} from '@/lib/server/auth-store';
 
 // Determine if an external backend is configured (exclude port 8080 which is Nginx in this container)
 const RAW_BACKEND_URL = process.env.BACKEND_API_URL?.trim();
@@ -9,99 +16,6 @@ const HAS_EXTERNAL_BACKEND = Boolean(
   !RAW_BACKEND_URL.includes('127.0.0.1:8080') &&
   !RAW_BACKEND_URL.includes(':3000')
 );
-
-// Known seed accounts matching institutional TVET / College standards
-const SEED_DIRECTORY: Record<string, {
-  userId: string;
-  identifier: string;
-  email: string;
-  fullName: string;
-  roles: string[];
-  permissions: string[];
-  institutionId: string;
-}> = {
-  'adm-001': {
-    userId: 'usr_admin',
-    identifier: 'ADM-001',
-    email: 'admin@apex.edu',
-    fullName: 'Dr. Elizabeth Mutua',
-    roles: ['ADMIN'],
-    permissions: ['SYSTEM_ADMIN', 'FINANCE_MANAGE', 'ACADEMICS_MANAGE', 'ADMISSIONS_MANAGE', 'HR_MANAGE'],
-    institutionId: 'inst_apex_tvet'
-  },
-  'admin@apex.edu': {
-    userId: 'usr_admin',
-    identifier: 'ADM-001',
-    email: 'admin@apex.edu',
-    fullName: 'Dr. Elizabeth Mutua',
-    roles: ['ADMIN'],
-    permissions: ['SYSTEM_ADMIN', 'FINANCE_MANAGE', 'ACADEMICS_MANAGE', 'ADMISSIONS_MANAGE', 'HR_MANAGE'],
-    institutionId: 'inst_apex_tvet'
-  },
-  'lec-cs-104': {
-    userId: 'usr_lecturer',
-    identifier: 'LEC-CS-104',
-    email: 'p.mwangi@apex.edu',
-    fullName: 'Eng. Patrick Mwangi',
-    roles: ['LECTURER'],
-    permissions: ['COURSE_VIEW', 'COURSE_EDIT', 'MARKS_ENTER', 'STUDENT_VIEW', 'LMS_INSTRUCTOR'],
-    institutionId: 'inst_apex_tvet'
-  },
-  'p.mwangi@apex.edu': {
-    userId: 'usr_lecturer',
-    identifier: 'LEC-CS-104',
-    email: 'p.mwangi@apex.edu',
-    fullName: 'Eng. Patrick Mwangi',
-    roles: ['LECTURER'],
-    permissions: ['COURSE_VIEW', 'COURSE_EDIT', 'MARKS_ENTER', 'STUDENT_VIEW', 'LMS_INSTRUCTOR'],
-    institutionId: 'inst_apex_tvet'
-  },
-  'bursar-02': {
-    userId: 'usr_finance',
-    identifier: 'BURSAR-02',
-    email: 'finance@apex.edu',
-    fullName: 'CPA Moses Cheruiyot',
-    roles: ['FINANCE'],
-    permissions: ['FINANCE_VIEW', 'FINANCE_MANAGE', 'FEE_COLLECTION', 'PAYMENT_RECONCILE', 'INVOICE_CREATE'],
-    institutionId: 'inst_apex_tvet'
-  },
-  'finance@apex.edu': {
-    userId: 'usr_finance',
-    identifier: 'BURSAR-02',
-    email: 'finance@apex.edu',
-    fullName: 'CPA Moses Cheruiyot',
-    roles: ['FINANCE'],
-    permissions: ['FINANCE_VIEW', 'FINANCE_MANAGE', 'FEE_COLLECTION', 'PAYMENT_RECONCILE', 'INVOICE_CREATE'],
-    institutionId: 'inst_apex_tvet'
-  },
-  'stu-2026-001': {
-    userId: 'usr_student',
-    identifier: 'STU-2026-001',
-    email: 'john.kariuki@students.apex.edu',
-    fullName: 'John Kariuki',
-    roles: ['STUDENT'],
-    permissions: ['STUDENT_PORTAL_ACCESS', 'FEE_VIEW', 'EXAM_VIEW', 'COURSE_REGISTER', 'LMS_LEARNER'],
-    institutionId: 'inst_apex_tvet'
-  },
-  'cit/0042/2024': {
-    userId: 'usr_student',
-    identifier: 'CIT/0042/2024',
-    email: 'john.kariuki@students.apex.edu',
-    fullName: 'John Kariuki',
-    roles: ['STUDENT'],
-    permissions: ['STUDENT_PORTAL_ACCESS', 'FEE_VIEW', 'EXAM_VIEW', 'COURSE_REGISTER', 'LMS_LEARNER'],
-    institutionId: 'inst_apex_tvet'
-  },
-  'staff-dean-01': {
-    userId: 'usr_dean',
-    identifier: 'STAFF-DEAN-01',
-    email: 'dean.academics@apex.edu',
-    fullName: 'Prof. Geoffrey Kamau',
-    roles: ['DEAN', 'LECTURER'],
-    permissions: ['MARKS_MODERATE', 'MARKS_APPROVE', 'RESULTS_PUBLISH', 'AUDIT_VIEW'],
-    institutionId: 'inst_apex_tvet'
-  }
-};
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   return handleRequest(req, await params);
@@ -131,78 +45,62 @@ async function handleRequest(req: NextRequest, { path }: { path: string[] }) {
     return proxyRequest(req, targetPath);
   }
 
-  // 2. Built-in institutional route handling
+  // 2. Built-in authoritative institutional route handling
+  // A. AUTH LOGIN
   if (targetPath === 'auth/login' && req.method === 'POST') {
     try {
       const body = await req.json();
-      const trimmedId = String(body.identifier || '').trim();
-      const cleanKey = trimmedId.toLowerCase();
-      const password = body.password || '';
+      const { identifier, password, tenantId } = body;
 
-      const matched =
-        SEED_DIRECTORY[cleanKey] ||
-        (() => {
-          const u = INITIAL_USERS.find(
-            (user) =>
-              user.identifier.toLowerCase() === cleanKey ||
-              user.email.toLowerCase() === cleanKey ||
-              user.id.toLowerCase() === cleanKey
-          );
-          if (!u) return null;
-          return {
-            userId: u.id,
-            identifier: u.identifier,
-            email: u.email,
-            fullName: u.name,
-            roles: u.portalAssignments.map((p) => p.portalId),
-            permissions: u.portalAssignments.map((p) => p.roleId),
-            institutionId: body.tenantId || 'inst_apex_tvet',
-          };
-        })();
+      const authResult = await authenticateWithBackend(identifier, password, tenantId);
 
-      if (!matched) {
+      if (!authResult.success || !authResult.session) {
         return NextResponse.json(
           {
             success: false,
-            message: 'Invalid credentials. User not found in institutional directory.',
+            message: authResult.message
           },
-          { status: 401 }
+          { status: authResult.statusCode }
         );
       }
 
-      if (password !== 'Password123!' && password.length < 4) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Invalid password. Institutional default is Password123!',
-          },
-          { status: 401 }
-        );
-      }
+      const session = authResult.session;
 
-      const sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
       const resData = {
-        sessionId,
-        userId: matched.userId,
-        identifier: matched.identifier,
-        email: matched.email,
-        fullName: matched.fullName,
-        roles: matched.roles,
-        permissions: matched.permissions,
-        institutionId: matched.institutionId,
+        sessionId: session.sessionId,
+        userId: session.userId,
+        id: session.userId,
+        identifier: session.identifier,
+        email: session.email,
+        fullName: session.fullName,
+        name: session.fullName,
+        institutionId: session.institutionId,
+        department: session.department,
+        faculty: session.faculty,
+        campus: session.campus,
+        status: session.status,
+        roles: session.roles,
+        permissions: session.permissions,
+        portalAssignments: session.portalAssignments
       };
 
       const response = NextResponse.json({
         success: true,
         message: 'Authentication successful',
-        data: resData,
+        data: resData
       });
 
-      response.cookies.set('erp_session_id', sessionId, {
+      response.cookies.set('erp_session_id', session.sessionId, {
         path: '/',
         httpOnly: true,
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7,
+        maxAge: 60 * 60 * 24 * 7
+      });
+      response.cookies.set('COLLEGE_ERP_SESSION', session.sessionId, {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7
       });
 
       return response;
@@ -212,38 +110,166 @@ async function handleRequest(req: NextRequest, { path }: { path: string[] }) {
     }
   }
 
+  // B. AUTH ME (Authoritative current user from active session)
   if (targetPath === 'auth/me' && req.method === 'GET') {
-    const defaultUser = SEED_DIRECTORY['adm-001'];
+    const session = getSessionFromRequest(req);
+    if (!session) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Unauthorized: Session missing or expired'
+        },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       data: {
-        userId: defaultUser.userId,
-        identifier: defaultUser.identifier,
-        email: defaultUser.email,
-        fullName: defaultUser.fullName,
-        roles: defaultUser.roles,
-        permissions: defaultUser.permissions,
-        institutionId: defaultUser.institutionId,
-      },
+        id: session.userId,
+        userId: session.userId,
+        identifier: session.identifier,
+        email: session.email,
+        fullName: session.fullName,
+        name: session.fullName,
+        institutionId: session.institutionId,
+        department: session.department,
+        faculty: session.faculty,
+        campus: session.campus,
+        status: session.status,
+        roles: session.roles,
+        permissions: session.permissions,
+        portalAssignments: session.portalAssignments
+      }
     });
   }
 
+  // C. AUTH LOGOUT
   if (targetPath === 'auth/logout' && req.method === 'POST') {
+    const session = getSessionFromRequest(req);
+    if (session) {
+      invalidateSession(session.sessionId);
+    }
     const res = NextResponse.json({
       success: true,
       message: 'Logged out successfully',
-      data: null,
+      data: null
     });
     res.cookies.delete('erp_session_id');
+    res.cookies.delete('COLLEGE_ERP_SESSION');
     return res;
   }
 
-  // Fallback for all other endpoints to guarantee standard JSON response
+  // Session check for protected domain resources
+  const session = getSessionFromRequest(req);
+
+  // D. STUDENTS / ME
+  if (targetPath === 'students/me' && req.method === 'GET') {
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const result = getStudentData(session, 'me');
+    return NextResponse.json(
+      { success: result.allowed, data: result.data, error: result.error },
+      { status: result.statusCode }
+    );
+  }
+
+  // E. STUDENTS / ME / FEES
+  if (targetPath === 'students/me/fees' && req.method === 'GET') {
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const result = getStudentInvoices(session);
+    return NextResponse.json(
+      { success: result.allowed, data: result.data, error: result.error },
+      { status: result.statusCode }
+    );
+  }
+
+  // F. STUDENTS / :ID (Strict IDOR protection)
+  if (targetPath.startsWith('students/') && req.method === 'GET') {
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const requestedStudentId = targetPath.split('/')[1];
+    const result = getStudentData(session, requestedStudentId);
+    return NextResponse.json(
+      { success: result.allowed, data: result.data, error: result.error },
+      { status: result.statusCode }
+    );
+  }
+
+  // G. STUDENTS DIRECTORY (Restricted to Staff)
+  if (targetPath === 'students' && req.method === 'GET') {
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const isStaff = session.roles.some(r => ['ADMIN', 'LECTURER', 'FINANCE', 'DEAN'].includes(r));
+    if (!isStaff) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Students cannot access the global student registry.' },
+        { status: 403 }
+      );
+    }
+    // Return staff student view
+    return NextResponse.json({
+      success: true,
+      data: [
+        {
+          id: 'stu_john',
+          identifier: 'CIT/0042/2024',
+          name: 'John Kariuki',
+          programme: 'BSc Computer Science & Information Technology',
+          year: 'Year 2, Semester 2',
+          gpa: 3.82,
+          financialStatus: 'CLEARED'
+        }
+      ]
+    });
+  }
+
+  // H. USERS DIRECTORY (Strictly restricted to Admin)
+  if (targetPath === 'users' && req.method === 'GET') {
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const result = getInstitutionalUserList(session);
+    return NextResponse.json(
+      { success: result.allowed, data: result.data, error: result.error },
+      { status: result.statusCode }
+    );
+  }
+
+  // I. FINANCE SUMMARY (Restricted to Finance & Admin)
+  if (targetPath.startsWith('finance') && req.method === 'GET') {
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const isFinanceOrAdmin = session.roles.some(r => ['FINANCE', 'ADMIN'].includes(r));
+    if (!isFinanceOrAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Insufficient financial governance privileges.' },
+        { status: 403 }
+      );
+    }
+    return NextResponse.json({
+      success: true,
+      data: {
+        totalRevenue: 24500000,
+        outstandingReceivables: 4200000,
+        reconciliationRate: 98.4,
+        activeInvoicesCount: 142
+      }
+    });
+  }
+
+  // Default institutional response
   return NextResponse.json({
     success: true,
     message: `Request processed by institutional gateway (${targetPath})`,
     data: [],
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString()
   });
 }
 
@@ -258,7 +284,7 @@ async function proxyRequest(req: NextRequest, targetPath: string) {
     'user-agent',
     'x-forwarded-for',
     'x-forwarded-proto',
-    'x-request-id',
+    'x-request-id'
   ]);
 
   const headers: Record<string, string> = {};
@@ -271,7 +297,7 @@ async function proxyRequest(req: NextRequest, targetPath: string) {
 
   const fetchOptions: RequestInit = {
     method: req.method,
-    headers,
+    headers
   };
 
   if (!['GET', 'HEAD'].includes(req.method)) {
@@ -299,8 +325,8 @@ async function proxyRequest(req: NextRequest, targetPath: string) {
     const clientRes = new NextResponse(body, {
       status: backendRes.status,
       headers: {
-        'content-type': contentType,
-      },
+        'content-type': contentType
+      }
     });
 
     const setCookie = backendRes.headers.get('set-cookie');
@@ -314,8 +340,9 @@ async function proxyRequest(req: NextRequest, targetPath: string) {
     return NextResponse.json(
       {
         success: false,
-        message: `Institutional backend proxy error: ${message}`,
-        timestamp: new Date().toISOString(),
+        message: 'Unable to sign you in right now. Please try again.',
+        error: message,
+        timestamp: new Date().toISOString()
       },
       { status: 502 }
     );

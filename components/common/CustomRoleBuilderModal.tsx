@@ -52,7 +52,11 @@ export function CustomRoleBuilderModal() {
   const [selectedPermissions, setSelectedPermissions] = useState<PermissionAction[]>(['view']);
   const [successMessage, setSuccessMessage] = useState('');
 
-  if (!isRoleBuilderOpen) return null;
+  const isAdminUser = currentUser?.portalAssignments?.some(
+    a => a.portalId === 'ADMIN' && (a.roleId === 'ROLE_ADMIN' || a.roleId === 'ROLE_SUPER_ADMIN' || a.isAdmin)
+  );
+
+  if (!isRoleBuilderOpen || !isAdminUser) return null;
 
   const togglePermission = (action: PermissionAction) => {
     setSelectedPermissions(prev =>

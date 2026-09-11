@@ -27,7 +27,10 @@ export function AccessDeniedView({ portalId, reason }: AccessDeniedViewProps) {
   } = useERP();
 
   const targetPortal = portals.find(p => p.id === portalId);
-  const firstAllowedPortal = currentUser.portalAssignments[0]?.portalId || 'STUDENT';
+  const firstAllowedPortal = currentUser.portalAssignments[0]?.portalId || 'PUBLIC';
+  const isAdminUser = currentUser.portalAssignments.some(
+    a => a.portalId === 'ADMIN' && (a.roleId === 'ROLE_ADMIN' || a.roleId === 'ROLE_SUPER_ADMIN' || a.isAdmin)
+  );
 
   return (
     <div className="flex-1 p-8 flex items-center justify-center bg-slate-950 text-slate-100">
@@ -84,13 +87,15 @@ export function AccessDeniedView({ portalId, reason }: AccessDeniedViewProps) {
             <span>Return to Authorized Portal ({firstAllowedPortal})</span>
           </button>
 
-          <button
-            onClick={() => setIsSecuritySuiteOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition"
-          >
-            <ShieldAlert className="w-4 h-4 text-emerald-400" />
-            <span>View Acceptance Test Suite</span>
-          </button>
+          {isAdminUser && (
+            <button
+              onClick={() => setIsSecuritySuiteOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition"
+            >
+              <ShieldAlert className="w-4 h-4 text-emerald-400" />
+              <span>View Acceptance Test Suite</span>
+            </button>
+          )}
         </div>
 
         {/* Secure Re-authentication CTA */}

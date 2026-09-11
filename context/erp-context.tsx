@@ -228,6 +228,27 @@ interface ERPContextType {
 
 const ERPContext = createContext<ERPContextType | undefined>(undefined);
 
+export const PUBLIC_GUEST_USER: UserIdentity = {
+  id: 'usr_guest',
+  identifier: 'GUEST',
+  name: 'Public Visitor',
+  email: '',
+  avatarUrl: '',
+  institution: 'Apex National Polytechnic',
+  department: '',
+  faculty: '',
+  campus: 'Main Campus',
+  status: 'ACTIVE',
+  portalAssignments: [
+    {
+      portalId: 'PUBLIC',
+      roleId: 'ROLE_PUBLIC',
+      roleName: 'Visitor',
+      assignedAt: '2026-01-01T00:00:00.000Z'
+    }
+  ]
+};
+
 export function ERPProvider({ children }: { children: ReactNode }) {
   // Institutional Settings State with LocalStorage synchronization
   const [institutionalSettings, setInstitutionalSettings] = useState<InstitutionalSettings>(() => {
@@ -259,9 +280,47 @@ export function ERPProvider({ children }: { children: ReactNode }) {
   const [portals, setPortals] = useState<PortalDefinition[]>(PORTAL_REGISTRY);
   const [roles, setRoles] = useState<RoleDefinition[]>(INITIAL_ROLES);
   const [users, setUsers] = useState<UserIdentity[]>(INITIAL_USERS);
-  const [currentUser, setCurrentUser] = useState<UserIdentity>(INITIAL_USERS[0]); // John Doe by default
+  const [currentUser, setCurrentUser] = useState<UserIdentity>(PUBLIC_GUEST_USER);
   const [activePortalId, setActivePortalId] = useState<PortalId>('PUBLIC');
   const [activeNavTab, setActiveNavTab] = useState<string>('dashboard');
+
+  // Authoritative Session Restoration on App Mount
+  useEffect(() => {
+    let isMounted = true;
+    async function restoreSession() {
+      try {
+        const res = await fetch('/api/v1/auth/me', {
+          credentials: 'include'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data && isMounted) {
+            const serverUser = data.data;
+            const restoredUser: UserIdentity = {
+              id: serverUser.id || serverUser.userId,
+              identifier: serverUser.identifier,
+              name: serverUser.fullName || serverUser.name || serverUser.identifier,
+              email: serverUser.email || '',
+              avatarUrl: serverUser.avatarUrl || '',
+              institution: serverUser.institution || institutionalSettings.name,
+              department: serverUser.department || '',
+              faculty: serverUser.faculty || '',
+              campus: serverUser.campus || '',
+              status: (serverUser.status as any) || 'ACTIVE',
+              portalAssignments: serverUser.portalAssignments || []
+            };
+            setCurrentUser(restoredUser);
+          }
+        }
+      } catch {
+        // No active session or network error; keep public guest state
+      }
+    }
+    restoreSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [institutionalSettings.name]);
 
   // Responsive Layout States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -285,6 +344,7 @@ export function ERPProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('erp_session_id');
     }
+    setCurrentUser(PUBLIC_GUEST_USER);
     setActivePortalId('PUBLIC');
     setIsMobileSidebarOpen(false);
   };
@@ -374,7 +434,7 @@ export function ERPProvider({ children }: { children: ReactNode }) {
     let resolvedPortal: PortalId =
       (targetPortal && targetPortal !== 'STAFF' ? targetPortal : null) ||
       user.portalAssignments[0]?.portalId ||
-      'STUDENT';
+      'PUBLIC';
 
     // Verify user has access to target, fallback to first allowed
     const checkTarget = evaluatePortalAccess(user, resolvedPortal, roles);
@@ -382,7 +442,7 @@ export function ERPProvider({ children }: { children: ReactNode }) {
       const firstAllowed = user.portalAssignments.find(
         (a) => evaluatePortalAccess(user, a.portalId, roles).allowed
       );
-      resolvedPortal = firstAllowed ? firstAllowed.portalId : (user.portalAssignments[0]?.portalId || 'STUDENT');
+      resolvedPortal = firstAllowed ? firstAllowed.portalId : (user.portalAssignments[0]?.portalId || 'PUBLIC');
     }
 
     setActivePortalId(resolvedPortal);

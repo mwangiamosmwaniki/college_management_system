@@ -103,7 +103,11 @@ export function CrudLifecycleSuiteModal() {
     return runAutomatedCrudAcceptanceTests(crudEntities, users);
   }, [crudEntities, users, testRefreshKey]);
 
-  if (!isCrudLifecycleSuiteOpen) return null;
+  const isAdminUser = currentUser?.portalAssignments?.some(
+    a => a.portalId === 'ADMIN' && (a.roleId === 'ROLE_ADMIN' || a.roleId === 'ROLE_SUPER_ADMIN' || a.isAdmin)
+  );
+
+  if (!isCrudLifecycleSuiteOpen || !isAdminUser) return null;
 
   const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
     setNotification({ type, message });

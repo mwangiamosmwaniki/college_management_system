@@ -20,6 +20,7 @@ export function AuditTrailDrawer() {
   const {
     isAuditDrawerOpen,
     setIsAuditDrawerOpen,
+    currentUser,
     auditLogs,
     activePortalId,
     portals
@@ -29,7 +30,11 @@ export function AuditTrailDrawer() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  if (!isAuditDrawerOpen) return null;
+  const isAdminUser = currentUser?.portalAssignments?.some(
+    a => a.portalId === 'ADMIN' && (a.roleId === 'ROLE_ADMIN' || a.roleId === 'ROLE_SUPER_ADMIN' || a.isAdmin)
+  );
+
+  if (!isAuditDrawerOpen || !isAdminUser) return null;
 
   const filteredLogs = auditLogs.filter(log => {
     if (selectedPortalFilter !== 'ALL' && log.portalId !== selectedPortalFilter) return false;

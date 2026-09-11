@@ -19,11 +19,16 @@ export function PortalHealthModal() {
   const {
     isHealthModalOpen,
     setIsHealthModalOpen,
+    currentUser,
     portals,
     togglePortalStatus
   } = useERP();
 
-  if (!isHealthModalOpen) return null;
+  const isAdminUser = currentUser?.portalAssignments?.some(
+    a => a.portalId === 'ADMIN' && (a.roleId === 'ROLE_ADMIN' || a.roleId === 'ROLE_SUPER_ADMIN' || a.isAdmin)
+  );
+
+  if (!isHealthModalOpen || !isAdminUser) return null;
 
   const getStatusBadge = (status: PortalStatus) => {
     switch (status) {

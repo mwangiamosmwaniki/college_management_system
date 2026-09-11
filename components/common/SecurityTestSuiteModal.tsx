@@ -20,6 +20,7 @@ export function SecurityTestSuiteModal() {
   const {
     isSecuritySuiteOpen,
     setIsSecuritySuiteOpen,
+    currentUser,
     users,
     roles
   } = useERP();
@@ -27,11 +28,15 @@ export function SecurityTestSuiteModal() {
   const [filter, setFilter] = useState<'ALL' | 'PASSED' | 'FAILED'>('ALL');
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const isAdminUser = currentUser?.portalAssignments?.some(
+    a => a.portalId === 'ADMIN' && (a.roleId === 'ROLE_ADMIN' || a.roleId === 'ROLE_SUPER_ADMIN' || a.isAdmin)
+  );
+
   const testResults = useMemo(() => {
     return runAutomatedAcceptanceTests(users, roles);
   }, [users, roles, refreshKey]);
 
-  if (!isSecuritySuiteOpen) return null;
+  if (!isSecuritySuiteOpen || !isAdminUser) return null;
 
   const passedCount = testResults.filter(t => t.passed).length;
   const totalCount = testResults.length;

@@ -28,7 +28,6 @@ export function UnifiedLoginModal() {
     isLoginModalOpen,
     setIsLoginModalOpen,
     loginTargetPortal,
-    users,
     loginUser,
     institutionalSettings
   } = useERP();
@@ -135,9 +134,10 @@ export function UnifiedLoginModal() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/auth', {
+      const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           identifier: trimmedId,
           password: passwordInput,
@@ -145,103 +145,90 @@ export function UnifiedLoginModal() {
         })
       });
 
-      const contentType = res.headers.get('content-type') || '';
-      let data: any = null;
-
-      if (contentType.includes('application/json')) {
-        data = await res.json();
-      } else {
-        const rawText = await res.text();
-        const preview = rawText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
-        throw new Error(
-          res.status === 502 || res.status === 504
-            ? 'Institutional authentication service timed out. Please retry.'
-            : `Authentication gateway returned unexpected response (${res.status})${preview ? `: ${preview}` : ''}`
-        );
-      }
-
-      if (!res.ok || (data.success === false && !data.data)) {
-        setErrorMsg(data.error || data.message || 'Authentication failed. Please verify credentials.');
+      if (res.status === 401) {
+        setErrorMsg('Invalid credentials.');
         setIsSubmitting(false);
         return;
       }
 
-      const serverData = data.data || data.user || {};
+      if (!res.ok) {
+        setErrorMsg('Unable to sign you in right now. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        setErrorMsg('Unable to sign you in right now. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        setErrorMsg(res.status === 401 ? 'Invalid credentials.' : 'Unable to sign you in right now. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const serverData = data.data;
+
+      // Store session ID if provided
       if (serverData.sessionId && typeof window !== 'undefined') {
         sessionStorage.setItem('erp_session_id', serverData.sessionId);
       }
 
-      // Match user identity in central registry
-      let matchedUser = users.find(u =>
-        (serverData.userId && u.id === serverData.userId) ||
-        (serverData.identifier && u.identifier.toLowerCase() === serverData.identifier.toLowerCase()) ||
-        (serverData.email && u.email.toLowerCase() === serverData.email.toLowerCase()) ||
-        u.identifier.toLowerCase() === trimmedId.toLowerCase() ||
-        u.email.toLowerCase() === trimmedId.toLowerCase()
-      );
-
-      if (!matchedUser) {
-        const portalAssignments = (serverData.roles || []).map((r: string) => {
-          const roleUpper = r.toUpperCase();
-          const portalId: PortalId =
-            roleUpper === 'ADMIN' ? 'ADMIN' :
-            roleUpper === 'STUDENT' ? 'STUDENT' :
-            roleUpper === 'LECTURER' ? 'LECTURER' :
-            roleUpper === 'FINANCE' ? 'FINANCE' :
-            roleUpper === 'DEAN' ? 'EXAMINATIONS' :
-            roleUpper === 'APPLICANT' ? 'ADMISSIONS' : 'STUDENT';
-          return {
-            portalId,
-            roleId: `ROLE_${roleUpper}`,
-            roleName: r,
-            isAdmin: roleUpper === 'ADMIN',
-            isMonitor: false,
-            assignedAt: '2026-08-24T08:00:00.000Z'
-          };
-        });
-
-        matchedUser = {
-          id: serverData.userId || ('usr_' + trimmedId.toLowerCase().replace(/[^a-z0-9]/g, '_')),
-          identifier: serverData.identifier || trimmedId,
-          name: serverData.fullName || serverData.identifier || trimmedId,
-          email: serverData.email || `${trimmedId}@apex.edu`,
-          avatarUrl: '',
-          institution: institutionalSettings.name,
-          department: 'Computing & Informatics',
-          faculty: 'School of Computing',
-          campus: 'Main Campus',
-          portalAssignments: portalAssignments.length > 0 ? portalAssignments : [
-            {
-              portalId: 'STUDENT',
-              roleId: 'ROLE_STUDENT',
-              roleName: 'Student',
-              assignedAt: '2026-08-24T08:00:00.000Z'
-            }
-          ],
-          status: 'ACTIVE'
-        };
-      }
-
-      proceedAfterAuthentication(matchedUser);
-    } catch (err: any) {
-      // Offline fallback for demo/prototype mode if credentials correspond to an enrolled user
-      const localMatched = users.find(u =>
-        u.identifier.toLowerCase() === trimmedId.toLowerCase() ||
-        u.email.toLowerCase() === trimmedId.toLowerCase()
-      );
-
-      if (localMatched && (passwordInput === 'Password123!' || passwordInput === 'password' || passwordInput.length >= 4)) {
-        proceedAfterAuthentication(localMatched);
+      // Verify that backend returned complete authoritative identity information
+      // Do NOT invent missing fields or construct synthetic identity
+      if (
+        (!serverData.id && !serverData.userId) ||
+        !serverData.identifier ||
+        !serverData.roles ||
+        !Array.isArray(serverData.roles)
+      ) {
+        setErrorMsg('Unable to sign you in right now. Please try again.');
+        setIsSubmitting(false);
         return;
       }
 
-      const safeMessage =
-        err instanceof Error
-          ? err.message
-          : typeof err === 'object' && err !== null && 'message' in err && typeof err.message === 'string'
-          ? err.message
-          : 'Authentication failed. Please verify credentials.';
-      setErrorMsg(safeMessage);
+      // Construct UserIdentity STRICTLY from the backend authoritative attributes
+      const authoritativeUser: UserIdentity = {
+        id: serverData.id || serverData.userId,
+        identifier: serverData.identifier,
+        name: serverData.fullName || serverData.name || serverData.identifier,
+        email: serverData.email || '',
+        avatarUrl: serverData.avatarUrl || '',
+        institution: serverData.institution || institutionalSettings.name,
+        department: serverData.department || '',
+        faculty: serverData.faculty || '',
+        campus: serverData.campus || '',
+        status: (serverData.status as any) || 'ACTIVE',
+        portalAssignments: serverData.portalAssignments && serverData.portalAssignments.length > 0
+          ? serverData.portalAssignments
+          : serverData.roles.map((r: string) => {
+              const roleUpper = r.toUpperCase();
+              const portalId: PortalId =
+                roleUpper === 'ADMIN' ? 'ADMIN' :
+                roleUpper === 'STUDENT' ? 'STUDENT' :
+                roleUpper === 'LECTURER' ? 'LECTURER' :
+                roleUpper === 'FINANCE' ? 'FINANCE' :
+                roleUpper === 'DEAN' ? 'EXAMINATIONS' :
+                roleUpper === 'APPLICANT' ? 'ADMISSIONS' : 'STUDENT';
+              return {
+                portalId,
+                roleId: `ROLE_${roleUpper}`,
+                roleName: r,
+                isAdmin: roleUpper === 'ADMIN',
+                isMonitor: false,
+                assignedAt: new Date().toISOString()
+              };
+            })
+      };
+
+      proceedAfterAuthentication(authoritativeUser);
+    } catch {
+      // Backend unavailable or network error: STRICTLY show standard failure message, NEVER authenticate locally
+      setErrorMsg('Unable to sign you in right now. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
