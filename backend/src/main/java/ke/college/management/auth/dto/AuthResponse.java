@@ -20,4 +20,5 @@ public class AuthResponse {
     private String institutionId;
     private List<String> roles;
     private List<String> permissions;
+    private List<PortalAssignmentDto> portalAssignments;
 }

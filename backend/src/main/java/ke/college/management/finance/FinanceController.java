@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.common.PageResponse;
+import ke.college.management.exceptions.ResourceNotFoundException;
+import ke.college.management.exceptions.UnauthorizedException;
 import ke.college.management.finance.dto.CreateInvoiceRequest;
 import ke.college.management.finance.dto.RecordPaymentRequest;
 import ke.college.management.finance.entity.FinancialLedger;
@@ -14,7 +16,10 @@ import ke.college.management.finance.entity.Payment;
 import ke.college.management.finance.entity.Receipt;
 import ke.college.management.finance.repository.InvoiceRepository;
 import ke.college.management.finance.repository.PaymentRepository;
+import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.SecurityUtils;
+import ke.college.management.students.entity.Student;
+import ke.college.management.students.repository.StudentRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -41,8 +46,25 @@ public class FinanceController {
 
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
+    private final StudentRepository studentRepository;
     private final PaymentService paymentService;
     private final FinanceReconciliationService reconciliationService;
+
+    private void validateStudentAccess(String studentId) {
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaff = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
+                               a.getAuthority().startsWith("ROLE_FINANCE") ||
+                               a.getAuthority().startsWith("ROLE_DEAN"));
+        if (!isStaff) {
+            Student student = studentRepository.findByInstitutionIdAndUserId(
+                    SecurityUtils.getCurrentInstitutionId(), currentUser.getId()
+            ).orElseThrow(() -> new UnauthorizedException("IDOR Violation: Student profile not found for account"));
+            if (!student.getId().equals(studentId)) {
+                throw new UnauthorizedException("IDOR Violation: Access denied to student finance records");
+            }
+        }
+    }
 
     @GetMapping("/invoices")
     @PreAuthorize("hasAuthority('FINANCE_VIEW') or hasRole('ADMIN')")
@@ -76,13 +98,37 @@ public class FinanceController {
     @GetMapping("/invoices/student/{studentId}")
     @Operation(summary = "Get fee invoices for student")
     public ApiResponse<List<Invoice>> getStudentInvoices(@PathVariable String studentId) {
+        validateStudentAccess(studentId);
         return ApiResponse.success(invoiceRepository.findByStudentId(studentId));
     }
 
     @GetMapping("/payments/student/{studentId}")
     @Operation(summary = "Get payment history for student")
     public ApiResponse<List<Payment>> getStudentPayments(@PathVariable String studentId) {
+        validateStudentAccess(studentId);
         return ApiResponse.success(paymentRepository.findByStudentId(studentId));
+    }
+
+    @GetMapping("/payments/{id}")
+    @Operation(summary = "Get single payment record with IDOR validation")
+    public ApiResponse<Payment> getPaymentById(@PathVariable String id) {
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+        SecurityUtils.validateTenantAccess(payment.getInstitutionId());
+
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaff = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
+                               a.getAuthority().startsWith("ROLE_FINANCE"));
+        if (!isStaff) {
+            Student student = studentRepository.findByInstitutionIdAndUserId(
+                    SecurityUtils.getCurrentInstitutionId(), currentUser.getId()
+            ).orElseThrow(() -> new UnauthorizedException("IDOR Violation: Student profile not found"));
+            if (!student.getId().equals(payment.getStudentId())) {
+                throw new UnauthorizedException("IDOR Violation: Access denied to payment record " + id);
+            }
+        }
+        return ApiResponse.success(payment);
     }
 
     @PostMapping("/payments/record-manual")
@@ -96,12 +142,14 @@ public class FinanceController {
     @GetMapping("/ledger/student/{studentId}")
     @Operation(summary = "Get immutable accounting ledger entries for student")
     public ApiResponse<List<FinancialLedger>> getStudentLedger(@PathVariable String studentId) {
+        validateStudentAccess(studentId);
         return ApiResponse.success(paymentService.getStudentLedger(studentId));
     }
 
     @GetMapping("/receipts/student/{studentId}")
     @Operation(summary = "Get authoritative receipts for student")
     public ApiResponse<List<Receipt>> getStudentReceipts(@PathVariable String studentId) {
+        validateStudentAccess(studentId);
         return ApiResponse.success(paymentService.getStudentReceipts(studentId));
     }
 

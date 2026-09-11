@@ -10,6 +10,7 @@ import ke.college.management.auth.dto.AuthResponse;
 import ke.college.management.auth.dto.ChangePasswordRequest;
 import ke.college.management.auth.dto.ForgotPasswordRequest;
 import ke.college.management.auth.dto.LoginRequest;
+import ke.college.management.auth.dto.PortalAssignmentDto;
 import ke.college.management.auth.dto.ResetPasswordRequest;
 import ke.college.management.auth.dto.UserDto;
 import ke.college.management.auth.entity.AccountActivationToken;
@@ -45,6 +46,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
@@ -142,6 +144,7 @@ public class AuthService {
                     .institutionId(userDetails.getInstitutionId())
                     .roles(roles)
                     .permissions(permissions)
+                    .portalAssignments(computePortalAssignments(roles))
                     .build();
 
         } catch (BadCredentialsException ex) {
@@ -248,7 +251,142 @@ public class AuthService {
                 .status(user.getStatus())
                 .roles(roles)
                 .permissions(permissions)
+                .portalAssignments(computePortalAssignments(roles))
                 .build();
+    }
+
+    public static List<PortalAssignmentDto> computePortalAssignments(List<String> roles) {
+        List<PortalAssignmentDto> list = new ArrayList<>();
+        String now = Instant.now().toString();
+        boolean hasAdmin = roles.contains("ADMIN");
+        boolean hasLecturer = roles.contains("LECTURER");
+        boolean hasDean = roles.contains("DEAN");
+        boolean hasStudent = roles.contains("STUDENT");
+        boolean hasFinance = roles.contains("FINANCE");
+        boolean hasRegistrar = roles.contains("REGISTRAR");
+        boolean hasHr = roles.contains("HR");
+        boolean hasApplicant = roles.contains("APPLICANT");
+
+        if (hasAdmin) {
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("ADMIN")
+                    .roleId("ROLE_ADMIN")
+                    .roleName("System Administrator")
+                    .isAdmin(true)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+        }
+        if (hasDean) {
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("EXAMINATIONS")
+                    .roleId("ROLE_DEAN")
+                    .roleName("Dean / Examinations Directorate")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("LECTURER")
+                    .roleId("ROLE_DEAN")
+                    .roleName("Faculty / Lecturer")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("ELEARNING")
+                    .roleId("ROLE_DEAN")
+                    .roleName("E-Learning Instructor")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+        } else if (hasLecturer) {
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("LECTURER")
+                    .roleId("ROLE_LECTURER")
+                    .roleName("Lecturer & Instructor")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("ELEARNING")
+                    .roleId("ROLE_LECTURER")
+                    .roleName("E-Learning Instructor")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+        }
+        if (hasFinance) {
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("FINANCE")
+                    .roleId("ROLE_FINANCE")
+                    .roleName("Finance & Bursary Officer")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+        }
+        if (hasRegistrar) {
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("ADMISSIONS")
+                    .roleId("ROLE_REGISTRAR")
+                    .roleName("Registrar / Admissions Officer")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+        }
+        if (hasHr) {
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("HR")
+                    .roleId("ROLE_HR")
+                    .roleName("Human Resources")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+        }
+        if (hasStudent) {
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("STUDENT")
+                    .roleId("ROLE_STUDENT")
+                    .roleName("Student Scholar")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("ELEARNING")
+                    .roleId("ROLE_STUDENT")
+                    .roleName("E-Learning Student")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("ELIBRARY")
+                    .roleId("ROLE_STUDENT")
+                    .roleName("Digital Library Patron")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+        }
+        if (hasApplicant && list.isEmpty()) {
+            list.add(PortalAssignmentDto.builder()
+                    .portalId("ADMISSIONS")
+                    .roleId("ROLE_APPLICANT")
+                    .roleName("Admissions Applicant")
+                    .isAdmin(false)
+                    .isMonitor(false)
+                    .assignedAt(now)
+                    .build());
+        }
+        return list;
     }
 
     @Transactional
