@@ -1,53 +1,40 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useERP } from '@/context/erp-context';
-import { PortalId } from '@/types/erp';
 import {
-  GraduationCap,
-  BookOpenCheck,
-  Library,
+  LayoutDashboard,
+  BookOpen,
+  Calendar,
+  FileCheck,
+  CreditCard,
+  FileText,
+  HelpCircle,
+  FolderOpen,
+  User,
+  Users,
+  Award,
+  CheckCircle2,
+  Clock,
+  Building2,
   Receipt,
   FileSpreadsheet,
-  Users,
-  Building2,
-  ShieldAlert,
-  UserCheck,
-  LayoutDashboard,
-  User,
-  CalendarCheck,
-  Award,
-  CreditCard,
-  CheckCircle,
-  FileText,
-  MessageSquare,
-  Bell,
   Settings,
-  Clock,
-  BookMarked,
-  FileCheck2,
-  HelpCircle,
-  Activity,
-  Layers,
-  Search,
-  ExternalLink,
+  ChevronLeft,
   ChevronRight,
-  ShieldCheck,
-  AlertTriangle,
-  Database,
-  Menu,
   X,
-  PanelLeftClose,
-  PanelLeftOpen
+  Library,
+  Briefcase,
+  Layers,
+  GraduationCap
 } from 'lucide-react';
 
 interface NavItem {
   id: string;
   label: string;
   icon: React.ReactNode;
-  badge?: string;
-  badgeVariant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'brand';
   section?: string;
+  badge?: string;
 }
 
 export function PortalNavigation() {
@@ -55,234 +42,128 @@ export function PortalNavigation() {
     activePortalId,
     activeNavTab,
     setActiveNavTab,
-    navigateToPortal,
     portals,
     currentUser,
-    isSidebarCollapsed,
-    toggleSidebarCollapse,
     isMobileSidebarOpen,
-    setIsMobileSidebarOpen
+    setIsMobileSidebarOpen,
+    isSidebarCollapsed,
+    toggleSidebarCollapse
   } = useERP();
 
   const activePortal = portals.find(p => p.id === activePortalId) || portals[0];
   const assignment = currentUser.portalAssignments.find(a => a.portalId === activePortalId);
-  const isMonitor = assignment?.isMonitor;
-  const isAdmin = assignment?.isAdmin;
 
-  const isSuperAdmin = currentUser.portalAssignments.some(
-    a => a.portalId === 'ADMIN' && (a.roleId === 'ROLE_SUPER_ADMIN' || a.isAdmin)
-  );
-
-  // Only other portals linked to the user's role
-  const otherRolePortals = portals.filter(p =>
-    p.id !== activePortalId && (
-      isSuperAdmin || currentUser.portalAssignments.some(a => a.portalId === p.id)
-    )
-  );
-
-  const getPortalIcon = (id: PortalId) => {
-    switch (id) {
-      case 'STUDENT': return <GraduationCap className="w-3.5 h-3.5 text-blue-400 shrink-0" />;
-      case 'ELEARNING': return <BookOpenCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
-      case 'ELIBRARY': return <Library className="w-3.5 h-3.5 text-amber-400 shrink-0" />;
-      case 'FINANCE': return <Receipt className="w-3.5 h-3.5 text-purple-400 shrink-0" />;
-      case 'EXAMINATIONS': return <FileSpreadsheet className="w-3.5 h-3.5 text-rose-400 shrink-0" />;
-      case 'HR': return <Users className="w-3.5 h-3.5 text-indigo-400 shrink-0" />;
-      case 'ADMISSIONS': return <UserCheck className="w-3.5 h-3.5 text-teal-400 shrink-0" />;
-      case 'HOSTEL': return <Building2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />;
-      case 'ADMIN': return <ShieldAlert className="w-3.5 h-3.5 text-slate-300 shrink-0" />;
-      default: return <Layers className="w-3.5 h-3.5 text-slate-400 shrink-0" />;
-    }
-  };
-
-  // Generate portal-specific navigation items grouped logically
+  // Define strictly structured, user-oriented navigation items based on institutional role
   const getNavItems = (): NavItem[] => {
     switch (activePortalId) {
       case 'STUDENT':
         return [
-          { id: 'dashboard', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Core Workspace' },
-          { id: 'profile', label: 'Student Bio & ID', icon: <User className="w-4 h-4" />, section: 'Core Workspace' },
-          { id: 'registration', label: 'Course Registration', icon: <CalendarCheck className="w-4 h-4" />, section: 'Academics' },
-          { id: 'courses', label: 'Enrolled Courses & Timetable', icon: <BookMarked className="w-4 h-4" />, section: 'Academics' },
-          { id: 'results', label: 'Exam Results & CGPA', icon: <Award className="w-4 h-4" />, section: 'Academics' },
-          { id: 'fees', label: 'Fees & Invoices', icon: <CreditCard className="w-4 h-4" />, section: 'Finance & Clearance' },
-          { id: 'clearance', label: 'Clearance Status', icon: <CheckCircle className="w-4 h-4" />, section: 'Finance & Clearance' },
-          { id: 'requests', label: 'Student Petitions', icon: <MessageSquare className="w-4 h-4" />, section: 'Support & Records' },
-          { id: 'documents', label: 'Official Documents', icon: <FileText className="w-4 h-4" />, section: 'Support & Records' },
-          ...(isMonitor || isAdmin ? [
-            { id: 'admin_monitor', label: isMonitor ? 'Portal Monitor' : 'Administration', icon: <Activity className="w-4 h-4" />, section: 'Governance' }
-          ] : [])
-        ];
-
-      case 'ELEARNING':
-        return [
-          { id: 'dashboard', label: 'LMS Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Workspace' },
-          { id: 'courses', label: 'Course Modules', icon: <BookOpenCheck className="w-4 h-4" />, section: 'Learning' },
-          { id: 'assignments', label: 'Assignments', icon: <FileCheck2 className="w-4 h-4" />, section: 'Learning' },
-          { id: 'quizzes', label: 'Assessments', icon: <HelpCircle className="w-4 h-4" />, section: 'Learning' },
-          { id: 'grading', label: 'Grading Studio', icon: <Award className="w-4 h-4" />, section: 'Grading' },
-          { id: 'data_lifecycle', label: 'LMS Master Data', icon: <Database className="w-4 h-4" />, section: 'Management' },
-          { id: 'analytics', label: 'Platform Telemetry', icon: <Activity className="w-4 h-4" />, section: 'Management' },
-          ...(isAdmin ? [{ id: 'settings', label: 'Platform Settings', icon: <Settings className="w-4 h-4" />, section: 'Management' }] : [])
-        ];
-
-      case 'ELIBRARY':
-        return [
-          { id: 'dashboard', label: 'Library Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Workspace' },
-          { id: 'catalog', label: 'Book Catalogue', icon: <Library className="w-4 h-4" />, section: 'Collection' },
-          { id: 'data_lifecycle', label: 'Resource Lifecycle', icon: <Database className="w-4 h-4" />, section: 'Collection' },
-          { id: 'my_loans', label: 'Loans & Circulation', icon: <Clock className="w-4 h-4" />, section: 'Circulation' },
-          { id: 'digital_drm', label: 'Digital Resources', icon: <FileText className="w-4 h-4" />, section: 'Circulation' },
-          { id: 'reservations', label: 'Reservations Queue', icon: <BookMarked className="w-4 h-4" />, section: 'Circulation' },
-          { id: 'monitor', label: 'Circulation Telemetry', icon: <Activity className="w-4 h-4" />, section: 'Management' },
-          ...(isAdmin ? [{ id: 'policies', label: 'Circulation Policies', icon: <Settings className="w-4 h-4" />, section: 'Management' }] : [])
-        ];
-
-      case 'FINANCE':
-        return [
-          { id: 'dashboard', label: 'Bursary Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Workspace' },
-          { id: 'workflow', label: 'Disbursement Pipeline', icon: <ShieldCheck className="w-4 h-4" />, section: 'Operations' },
-          { id: 'payments', label: 'Payment Register', icon: <Receipt className="w-4 h-4" />, section: 'Operations' },
-          { id: 'data_lifecycle', label: 'Invoice & Asset Data', icon: <Database className="w-4 h-4" />, section: 'Operations' },
-          { id: 'reconciliation', label: 'Reconciliation', icon: <CreditCard className="w-4 h-4" />, section: 'Governance' },
-          { id: 'fee_structures', label: 'Fee Structures', icon: <FileSpreadsheet className="w-4 h-4" />, section: 'Governance' },
-          { id: 'monitor', label: 'Finance Audits', icon: <Activity className="w-4 h-4" />, section: 'Governance' }
-        ];
-
-      case 'EXAMINATIONS':
-        return [
-          { id: 'dashboard', label: 'Exam Board Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Workspace' },
-          { id: 'marks_entry', label: 'Lecturer Marks Entry', icon: <FileSpreadsheet className="w-4 h-4" />, section: 'Grading' },
-          { id: 'moderation', label: 'Moderation Review', icon: <CheckCircle className="w-4 h-4" />, section: 'Grading' },
-          { id: 'approvals', label: 'Senate Gazette', icon: <Award className="w-4 h-4" />, section: 'Governance' },
-          { id: 'data_lifecycle', label: 'Exam Data Lifecycle', icon: <Database className="w-4 h-4" />, section: 'Governance' },
-          { id: 'monitor', label: 'Examination Telemetry', icon: <Activity className="w-4 h-4" />, section: 'Governance' }
+          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, section: 'General' },
+          { id: 'courses', label: 'My Courses', icon: <BookOpen className="w-4 h-4" />, section: 'My Academics' },
+          { id: 'registration', label: 'Course Registration', icon: <FileCheck className="w-4 h-4" />, section: 'My Academics' },
+          { id: 'results', label: 'Academic Results', icon: <Award className="w-4 h-4" />, section: 'My Academics' },
+          { id: 'fees', label: 'Fees & Invoices', icon: <CreditCard className="w-4 h-4" />, section: 'Finance' },
+          { id: 'clearance', label: 'Clearance Status', icon: <CheckCircle2 className="w-4 h-4" />, section: 'Finance' },
+          { id: 'requests', label: 'Formal Requests', icon: <HelpCircle className="w-4 h-4" />, section: 'Services' },
+          { id: 'documents', label: 'Official Documents', icon: <FolderOpen className="w-4 h-4" />, section: 'Services' },
+          { id: 'profile', label: 'My Student Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
       case 'LECTURER':
         return [
-          { id: 'dashboard', label: 'Faculty Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Workspace' },
-          { id: 'courses', label: 'My Courses & Syllabi', icon: <BookOpenCheck className="w-4 h-4" />, section: 'Teaching' },
-          { id: 'data_lifecycle', label: 'Course Lifecycle', icon: <Database className="w-4 h-4" />, section: 'Teaching' },
-          { id: 'attendance', label: 'Attendance Studio', icon: <CalendarCheck className="w-4 h-4" />, section: 'Teaching' },
-          { id: 'assignments', label: 'Assignments & Rubrics', icon: <FileCheck2 className="w-4 h-4" />, section: 'Assessment' },
-          { id: 'cbt_tests', label: 'Question Bank & CBT', icon: <HelpCircle className="w-4 h-4" />, section: 'Assessment' },
-          { id: 'gradebook', label: 'Senate Gradebook', icon: <FileSpreadsheet className="w-4 h-4" />, section: 'Assessment' },
-          { id: 'advising', label: 'Student Advising', icon: <Users className="w-4 h-4" />, section: 'Academic Support' },
-          { id: 'supervision', label: 'Thesis Supervision', icon: <GraduationCap className="w-4 h-4" />, section: 'Academic Support' },
-          { id: 'research', label: 'Research Publications', icon: <Award className="w-4 h-4" />, section: 'Professional' },
-          { id: 'workload', label: 'Workload & Requests', icon: <Receipt className="w-4 h-4" />, section: 'Professional' },
-          { id: 'monitor', label: 'Faculty Telemetry', icon: <Activity className="w-4 h-4" />, section: 'Professional' }
+          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, section: 'General' },
+          { id: 'courses', label: 'My Courses & Classes', icon: <BookOpen className="w-4 h-4" />, section: 'Teaching' },
+          { id: 'attendance', label: 'Class Attendance', icon: <Clock className="w-4 h-4" />, section: 'Teaching' },
+          { id: 'assignments', label: 'Assignments', icon: <FileText className="w-4 h-4" />, section: 'Assessment' },
+          { id: 'gradebook', label: 'Semester Gradebook', icon: <Award className="w-4 h-4" />, section: 'Assessment' },
+          { id: 'cbt_tests', label: 'Exams & Quizzes', icon: <FileSpreadsheet className="w-4 h-4" />, section: 'Assessment' },
+          { id: 'advising', label: 'Student Advising', icon: <Users className="w-4 h-4" />, section: 'Students' },
+          { id: 'supervision', label: 'Project Supervision', icon: <GraduationCap className="w-4 h-4" />, section: 'Students' },
+          { id: 'research', label: 'Research & Publications', icon: <Briefcase className="w-4 h-4" />, section: 'Academic' },
+          { id: 'workload', label: 'Faculty Requests', icon: <Layers className="w-4 h-4" />, section: 'Academic' },
+          { id: 'profile', label: 'Faculty Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
+        ];
+
+      case 'FINANCE':
+        return [
+          { id: 'dashboard', label: 'Financial Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'General' },
+          { id: 'payments', label: 'Payment Transactions', icon: <Receipt className="w-4 h-4" />, section: 'Finance' },
+          { id: 'workflow', label: 'Invoices & Billing', icon: <FileText className="w-4 h-4" />, section: 'Finance' },
+          { id: 'fee_structures', label: 'Fee Schedules', icon: <CreditCard className="w-4 h-4" />, section: 'Finance' },
+          { id: 'reconciliation', label: 'Bank Reconciliation', icon: <CheckCircle2 className="w-4 h-4" />, section: 'Finance' },
+          { id: 'profile', label: 'Finance Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
       case 'ADMISSIONS':
         return [
-          { id: 'dashboard', label: 'Admissions Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Workspace' },
-          { id: 'applications', label: 'Applicant Pipeline', icon: <Users className="w-4 h-4" />, section: 'Pipeline' },
-          { id: 'data_lifecycle', label: 'Applicant Lifecycle', icon: <Database className="w-4 h-4" />, section: 'Pipeline' },
-          { id: 'scrutiny', label: 'Credential Verification', icon: <ShieldCheck className="w-4 h-4" />, section: 'Screening' },
-          { id: 'offers', label: 'Offer Letters', icon: <FileText className="w-4 h-4" />, section: 'Screening' },
-          { id: 'monitor', label: 'Admissions Telemetry', icon: <Activity className="w-4 h-4" />, section: 'Governance' }
-        ];
-
-      case 'HOSTEL':
-        return [
-          { id: 'dashboard', label: 'Hostel Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Workspace' },
-          { id: 'allocation', label: 'Room Allocations', icon: <Building2 className="w-4 h-4" />, section: 'Operations' },
-          { id: 'data_lifecycle', label: 'Hostel Inventory Data', icon: <Database className="w-4 h-4" />, section: 'Operations' },
-          { id: 'residents', label: 'Hall Residents Directory', icon: <Users className="w-4 h-4" />, section: 'Operations' },
-          { id: 'maintenance', label: 'Maintenance Workorders', icon: <AlertTriangle className="w-4 h-4" />, section: 'Facilities' },
-          { id: 'clearance', label: 'Hostel Clearance', icon: <CheckCircle className="w-4 h-4" />, section: 'Facilities' }
+          { id: 'dashboard', label: 'Admissions Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'General' },
+          { id: 'applications', label: 'Candidate Applications', icon: <Users className="w-4 h-4" />, section: 'Applications' },
+          { id: 'scrutiny', label: 'Document Verification', icon: <FileCheck className="w-4 h-4" />, section: 'Applications' },
+          { id: 'offers', label: 'Offer Letters', icon: <FileText className="w-4 h-4" />, section: 'Applications' },
+          { id: 'profile', label: 'Admissions Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
       case 'HR':
         return [
-          { id: 'dashboard', label: 'HR Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Workspace' },
-          { id: 'staff', label: 'Staff Directory', icon: <Users className="w-4 h-4" />, section: 'Workforce' },
-          { id: 'data_lifecycle', label: 'Staff Data Lifecycle', icon: <Database className="w-4 h-4" />, section: 'Workforce' },
-          { id: 'leaves', label: 'Leave Applications', icon: <CalendarCheck className="w-4 h-4" />, section: 'Operations' },
-          { id: 'payroll', label: 'Payroll Batches', icon: <Receipt className="w-4 h-4" />, section: 'Operations' },
-          { id: 'monitor', label: 'HR Telemetry', icon: <Activity className="w-4 h-4" />, section: 'Governance' }
+          { id: 'dashboard', label: 'HR Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, section: 'General' },
+          { id: 'staff', label: 'Faculty & Staff', icon: <Users className="w-4 h-4" />, section: 'People' },
+          { id: 'leaves', label: 'Leave Applications', icon: <Calendar className="w-4 h-4" />, section: 'Leave' },
+          { id: 'payroll', label: 'Payroll Registers', icon: <Receipt className="w-4 h-4" />, section: 'Payroll' },
+          { id: 'profile', label: 'Staff Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
-      case 'PUBLIC':
+      case 'ELEARNING':
         return [
-          { id: 'home', label: 'Public Homepage', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Public Portal' },
-          { id: 'programmes', label: 'Course Catalog', icon: <BookOpenCheck className="w-4 h-4" />, section: 'Academics' },
-          { id: 'admissions', label: 'Admissions Guide', icon: <UserCheck className="w-4 h-4" />, section: 'Admissions' },
-          { id: 'news', label: 'News & Announcements', icon: <Bell className="w-4 h-4" />, section: 'Information' },
-          { id: 'downloads', label: 'Downloads & Prospectus', icon: <FileText className="w-4 h-4" />, section: 'Information' },
-          { id: 'contact', label: 'Campuses & Contact', icon: <Building2 className="w-4 h-4" />, section: 'Information' }
+          { id: 'dashboard', label: 'Course Catalog', icon: <BookOpen className="w-4 h-4" />, section: 'Academics' },
+          { id: 'modules', label: 'Weekly Modules', icon: <Layers className="w-4 h-4" />, section: 'Learning' },
+          { id: 'discussions', label: 'Class Discussions', icon: <Users className="w-4 h-4" />, section: 'Learning' },
+          { id: 'profile', label: 'Learning Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
-      case 'APPLICANT':
+      case 'ELIBRARY':
         return [
-          { id: 'application_form', label: 'Application Wizard', icon: <UserCheck className="w-4 h-4" />, section: 'Onboarding' },
-          { id: 'mpesa_payment', label: 'M-Pesa Fee (KES 1,000)', icon: <CreditCard className="w-4 h-4" />, section: 'Onboarding' },
-          { id: 'track_status', label: 'Track Application Status', icon: <Clock className="w-4 h-4" />, section: 'Verification' },
-          { id: 'offer_letter', label: 'Admission Offer Letter', icon: <Award className="w-4 h-4" />, section: 'Verification' }
+          { id: 'dashboard', label: 'Catalog Search', icon: <Library className="w-4 h-4" />, section: 'Collection' },
+          { id: 'loans', label: 'Active Loans', icon: <BookOpen className="w-4 h-4" />, section: 'Services' },
+          { id: 'digital', label: 'Digital Journals', icon: <FolderOpen className="w-4 h-4" />, section: 'Services' },
+          { id: 'profile', label: 'Patron Account', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
-      case 'HOD':
+      case 'EXAMINATIONS':
         return [
-          { id: 'curriculum', label: 'Curricula & Syllabus', icon: <BookOpenCheck className="w-4 h-4" />, section: 'Academic Management' },
-          { id: 'allocation', label: 'Lecturer Allocations', icon: <Users className="w-4 h-4" />, section: 'Academic Management' },
-          { id: 'moderation', label: 'Marks Moderation', icon: <Award className="w-4 h-4" />, section: 'Assessment' },
-          { id: 'timetable', label: 'Timetable & Lab Utilization', icon: <CalendarCheck className="w-4 h-4" />, section: 'Facilities' }
+          { id: 'dashboard', label: 'Senate Moderation', icon: <Award className="w-4 h-4" />, section: 'Examinations' },
+          { id: 'moderation', label: 'Marks Verification', icon: <CheckCircle2 className="w-4 h-4" />, section: 'Examinations' },
+          { id: 'gazette', label: 'Graduation Gazette', icon: <FileSpreadsheet className="w-4 h-4" />, section: 'Examinations' },
+          { id: 'profile', label: 'Examiner Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
-      case 'REGISTRAR':
+      case 'HOSTEL':
         return [
-          { id: 'student_registry', label: 'Trainee Master Registry', icon: <Users className="w-4 h-4" />, section: 'Registry' },
-          { id: 'admission_handover', label: 'Matriculation Handover', icon: <UserCheck className="w-4 h-4" />, section: 'Admissions' },
-          { id: 'academic_calendar', label: 'Academic Calendar', icon: <CalendarCheck className="w-4 h-4" />, section: 'Schedules' },
-          { id: 'transcripts', label: 'Official Transcripts', icon: <FileText className="w-4 h-4" />, section: 'Documentation' }
-        ];
-
-      case 'ATTACHMENT':
-        return [
-          { id: 'placements', label: 'Attachment Directory', icon: <Building2 className="w-4 h-4" />, section: 'Liaison' },
-          { id: 'logbooks', label: 'Weekly Logbook Verification', icon: <FileCheck2 className="w-4 h-4" />, section: 'Assessments' },
-          { id: 'assessors', label: 'Site Assessment Rubrics', icon: <Award className="w-4 h-4" />, section: 'Assessments' },
-          { id: 'insurance', label: 'Insurance & Letters', icon: <ShieldCheck className="w-4 h-4" />, section: 'Documentation' }
-        ];
-
-      case 'PROCUREMENT':
-        return [
-          { id: 'requisitions', label: 'Department Requisitions', icon: <Receipt className="w-4 h-4" />, section: 'Purchasing' },
-          { id: 'inventory', label: 'Central Store Stock', icon: <Database className="w-4 h-4" />, section: 'Stores' },
-          { id: 'purchase_orders', label: 'Local Purchase Orders (LPO)', icon: <FileText className="w-4 h-4" />, section: 'Purchasing' }
-        ];
-
-      case 'PRINCIPAL':
-        return [
-          { id: 'overview', label: 'Executive KPIs', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Executive' },
-          { id: 'financials', label: 'Revenue & Inflows', icon: <Receipt className="w-4 h-4" />, section: 'Financials' },
-          { id: 'academic_kpis', label: 'Department Scorecards', icon: <Award className="w-4 h-4" />, section: 'Performance' },
-          { id: 'governance', label: 'Senate & Council Gazettes', icon: <ShieldAlert className="w-4 h-4" />, section: 'Governance' }
+          { id: 'dashboard', label: 'Halls of Residence', icon: <Building2 className="w-4 h-4" />, section: 'Accommodation' },
+          { id: 'allocation', label: 'Bed Allocation', icon: <Users className="w-4 h-4" />, section: 'Accommodation' },
+          { id: 'maintenance', label: 'Maintenance Requests', icon: <HelpCircle className="w-4 h-4" />, section: 'Services' },
+          { id: 'profile', label: 'Warden Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
       case 'ADMIN':
         return [
-          { id: 'dashboard', label: 'Security & Governance', icon: <ShieldAlert className="w-4 h-4" />, section: 'Command Center' },
-          { id: 'settings', label: 'School Settings', icon: <Building2 className="w-4 h-4" />, section: 'Configuration' },
-          { id: 'users', label: 'Central Staff RBAC', icon: <Users className="w-4 h-4" />, section: 'Identity & Access' },
-          { id: 'rbac_matrix', label: 'Visual Role Matrix', icon: <Settings className="w-4 h-4" />, section: 'Identity & Access' },
-          { id: 'portals', label: 'Micro-Portal Registry', icon: <Layers className="w-4 h-4" />, section: 'Platform' },
-          { id: 'data_governance', label: 'Master Data Lifecycle', icon: <Database className="w-4 h-4" />, section: 'Platform' },
-          { id: 'audit', label: 'Audit Trail Ledger', icon: <FileText className="w-4 h-4" />, section: 'Governance' }
+          { id: 'dashboard', label: 'System Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'General' },
+          { id: 'users', label: 'Users & Roles', icon: <Users className="w-4 h-4" />, section: 'Identity' },
+          { id: 'rbac_matrix', label: 'Access Permissions', icon: <Settings className="w-4 h-4" />, section: 'Identity' },
+          { id: 'institutional_settings', label: 'Institution Profile', icon: <Building2 className="w-4 h-4" />, section: 'Organization' },
+          { id: 'settings', label: 'Academic Structure', icon: <Layers className="w-4 h-4" />, section: 'Organization' },
+          { id: 'audit', label: 'Audit Trail', icon: <FileText className="w-4 h-4" />, section: 'Governance' },
+          { id: 'profile', label: 'Administrator Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
       default:
         return [
-          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Workspace' }
+          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, section: 'General' },
+          { id: 'profile', label: 'My Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
     }
   };
 
   const navItems = getNavItems();
-
-  // Group items by section
   const sections = Array.from(new Set(navItems.map(item => item.section || 'General')));
 
   return (
@@ -290,7 +171,7 @@ export function PortalNavigation() {
       {/* 1. Mobile Backdrop Overlay */}
       {isMobileSidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
+          className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs md:hidden"
           onClick={() => setIsMobileSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -298,27 +179,24 @@ export function PortalNavigation() {
 
       {/* 2. Mobile Drawer Navigation */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 flex flex-col justify-between text-slate-300 shadow-2xl transition-transform duration-200 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white border-r border-slate-200 flex flex-col justify-between text-slate-700 shadow-2xl transition-transform duration-200 md:hidden ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Mobile Header with visible Close button */}
-        <div className="p-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+        {/* Mobile Header */}
+        <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
           <div className="min-w-0">
-            <span className="text-[10px] font-bold tracking-wider uppercase text-slate-400 font-mono block">
-              {activePortal.code} Module
-            </span>
-            <h2 className="text-sm font-bold text-white tracking-tight truncate">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-blue-600 block">
               {activePortal.name}
-            </h2>
-            <span className="text-[11px] text-emerald-400 font-medium truncate block">
-              {assignment ? assignment.roleName : 'Super Admin'}
             </span>
+            <h2 className="text-xs text-slate-500 truncate mt-0.5">
+              {assignment ? assignment.roleName : 'Standard Role'}
+            </h2>
           </div>
 
           <button
             onClick={() => setIsMobileSidebarOpen(false)}
-            className="p-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
             aria-label="Close navigation"
           >
             <X className="w-5 h-5" />
@@ -331,11 +209,16 @@ export function PortalNavigation() {
             const sectionItems = navItems.filter(i => (i.section || 'General') === section);
             return (
               <div key={section} className="space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1 font-mono">
-                  {section}
-                </div>
+                {section !== 'General' && (
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-3 py-1">
+                    {section}
+                  </div>
+                )}
                 {sectionItems.map(item => {
-                  const isActive = activeNavTab === item.id || (item.id === 'settings' && (activeNavTab === 'institutional_settings' || activeNavTab === 'school_settings'));
+                  const isActive = activeNavTab === item.id || 
+                    (item.id === 'settings' && (activeNavTab === 'school_settings')) ||
+                    (item.id === 'institutional_settings' && activeNavTab === 'settings');
+
                   return (
                     <button
                       key={item.id}
@@ -343,14 +226,14 @@ export function PortalNavigation() {
                         setActiveNavTab(item.id);
                         setIsMobileSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition cursor-pointer min-h-[44px] ${
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition cursor-pointer min-h-[42px] ${
                         isActive
-                          ? 'bg-blue-600 text-white font-semibold shadow-sm'
-                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          ? 'bg-blue-50 text-blue-800 font-semibold border-l-3 border-blue-600'
+                          : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className={isActive ? 'text-white' : 'text-slate-400'}>{item.icon}</span>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className={isActive ? 'text-blue-600' : 'text-slate-500'}>{item.icon}</span>
                         <span className="truncate">{item.label}</span>
                       </div>
                     </button>
@@ -360,95 +243,81 @@ export function PortalNavigation() {
             );
           })}
         </nav>
-
-        {/* Mobile Direct Portal Bridges */}
-        {otherRolePortals.length > 0 && (
-          <div className="p-3 border-t border-slate-800 bg-slate-950/80 space-y-2">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 font-mono">
-              Direct Role Bridges
-            </div>
-            <div className="space-y-1">
-              {otherRolePortals.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    navigateToPortal(p.id);
-                    setIsMobileSidebarOpen(false);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs font-medium transition cursor-pointer min-h-[40px]"
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    {getPortalIcon(p.id)}
-                    <span className="truncate">{p.name}</span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </aside>
 
       {/* 3. Desktop Sidebar (Responsive Collapsible) */}
       <aside
-        className={`bg-slate-900/95 border-r border-slate-800/80 hidden md:flex flex-col justify-between shrink-0 text-slate-300 shadow-sm transition-all duration-200 ${
+        className={`bg-white border-r border-slate-200 hidden md:flex flex-col justify-between shrink-0 text-slate-700 shadow-xs transition-all duration-200 ${
           isSidebarCollapsed ? 'w-16' : 'w-64'
         }`}
       >
-        {/* Desktop Sidebar Header */}
-        <div className={`p-4 border-b border-slate-800/80 bg-slate-950/40 ${isSidebarCollapsed ? 'text-center px-2' : ''}`}>
+        {/* Desktop Sidebar Header / Title */}
+        <div className={`p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between ${isSidebarCollapsed ? 'justify-center px-2' : ''}`}>
           {!isSidebarCollapsed ? (
-            <>
-              <span className="text-[10px] font-bold tracking-wider uppercase text-slate-400 font-mono block mb-1">
-                {activePortal.code} Module
-              </span>
-              <h2 className="text-sm font-bold text-white tracking-tight truncate">
+            <div className="min-w-0 flex-1">
+              <span className="text-[11px] font-bold tracking-wider uppercase text-blue-600 block truncate">
                 {activePortal.name}
-              </h2>
-              <div className="mt-2.5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs flex items-center justify-between">
-                <div className="min-w-0">
-                  <span className="text-[9px] uppercase text-slate-400 block font-mono font-medium">Assigned Role</span>
-                  <span className="font-semibold text-slate-200 truncate block text-[11px]">
-                    {assignment ? assignment.roleName : 'Super Admin'}
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-1" title={`${activePortal.name} - ${assignment?.roleName || 'Super Admin'}`}>
-              <div className="p-1.5 rounded-lg bg-blue-600/20 text-blue-400 font-bold text-xs font-mono">
-                {activePortal.code.slice(0, 2)}
-              </div>
+              </span>
+              <span className="text-xs text-slate-500 truncate block mt-0.5">
+                {assignment ? assignment.roleName : 'Standard Access'}
+              </span>
             </div>
+          ) : (
+            <span className="text-xs font-bold text-blue-600" title={activePortal.name}>
+              {activePortal.code.slice(0, 3)}
+            </span>
           )}
+
+          <button
+            id="btn-collapse-sidebar"
+            onClick={toggleSidebarCollapse}
+            className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer ml-1"
+            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
         </div>
 
-        {/* Grouped Nav Items */}
-        <nav className={`flex-1 ${isSidebarCollapsed ? 'px-1.5' : 'px-3'} py-3 space-y-4 overflow-y-auto`}>
+        {/* Desktop Scrollable Nav List */}
+        <nav className="flex-1 px-2.5 py-3 space-y-4 overflow-y-auto">
           {sections.map(section => {
             const sectionItems = navItems.filter(i => (i.section || 'General') === section);
             return (
-              <div key={section} className="space-y-0.5">
-                {!isSidebarCollapsed && (
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1 font-mono truncate">
+              <div key={section} className="space-y-1">
+                {!isSidebarCollapsed && section !== 'General' && (
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-3 py-1">
                     {section}
                   </div>
                 )}
+                {isSidebarCollapsed && section !== 'General' && (
+                  <div className="my-2 border-t border-slate-100" />
+                )}
                 {sectionItems.map(item => {
-                  const isActive = activeNavTab === item.id || (item.id === 'settings' && (activeNavTab === 'institutional_settings' || activeNavTab === 'school_settings'));
+                  const isActive = activeNavTab === item.id || 
+                    (item.id === 'settings' && (activeNavTab === 'school_settings')) ||
+                    (item.id === 'institutional_settings' && activeNavTab === 'settings');
+
                   return (
                     <button
                       key={item.id}
+                      id={`nav-item-${item.id}`}
                       onClick={() => setActiveNavTab(item.id)}
-                      title={isSidebarCollapsed ? item.label : undefined}
-                      className={`w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-2.5' : 'justify-between px-2.5 py-2'} rounded-lg text-xs font-medium transition cursor-pointer group relative ${
+                      title={item.label}
+                      className={`w-full flex items-center rounded-lg text-xs font-medium transition cursor-pointer ${
+                        isSidebarCollapsed
+                          ? 'justify-center p-2.5 min-h-[40px]'
+                          : 'px-3 py-2 min-h-[38px] justify-between'
+                      } ${
                         isActive
-                          ? 'bg-blue-600 text-white font-semibold shadow-sm'
-                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          ? 'bg-blue-50 text-blue-800 font-semibold border-l-3 border-blue-600'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                       }`}
                     >
-                      <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-2.5'} min-w-0`}>
-                        <span className={isActive ? 'text-white' : 'text-slate-400'}>{item.icon}</span>
+                      <div className={`flex items-center min-w-0 ${isSidebarCollapsed ? '' : 'gap-2.5'}`}>
+                        <span className={isActive ? 'text-blue-600 shrink-0' : 'text-slate-500 shrink-0'}>
+                          {item.icon}
+                        </span>
                         {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                       </div>
                     </button>
@@ -459,48 +328,16 @@ export function PortalNavigation() {
           })}
         </nav>
 
-        {/* Desktop Direct Portal Bridges */}
-        {!isSidebarCollapsed && otherRolePortals.length > 0 && (
-          <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 space-y-2">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 font-mono">
-              Direct Portal Bridges
-            </div>
-
-            <div className="space-y-1">
-              {otherRolePortals.map(p => (
-                <button
-                  key={p.id}
-                  id={`bridge-open-${p.id.toLowerCase()}-btn`}
-                  onClick={() => navigateToPortal(p.id)}
-                  className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs font-medium transition group cursor-pointer"
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    {getPortalIcon(p.id)}
-                    <span className="truncate">{p.name}</span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 group-hover:translate-x-0.5 transition shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Bottom Desktop Collapse/Expand Control */}
-        <div className="p-2 border-t border-slate-800/80 bg-slate-950/70 flex items-center justify-center">
-          <button
-            onClick={toggleSidebarCollapse}
-            className="w-full flex items-center justify-center gap-2 py-1.5 px-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 text-xs transition cursor-pointer"
-            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isSidebarCollapsed ? (
-              <PanelLeftOpen className="w-4 h-4" />
-            ) : (
-              <>
-                <PanelLeftClose className="w-4 h-4" />
-                <span className="text-[11px] font-medium">Collapse</span>
-              </>
-            )}
-          </button>
+        {/* Desktop Sidebar Footer */}
+        <div className={`p-3 border-t border-slate-100 bg-slate-50/50 text-[11px] text-slate-400 ${isSidebarCollapsed ? 'text-center' : 'flex items-center justify-between'}`}>
+          {!isSidebarCollapsed ? (
+            <>
+              <span className="truncate">Apex ERP System</span>
+              <span className="font-mono">v3.2</span>
+            </>
+          ) : (
+            <span className="font-mono text-[10px]">ERP</span>
+          )}
         </div>
       </aside>
     </>

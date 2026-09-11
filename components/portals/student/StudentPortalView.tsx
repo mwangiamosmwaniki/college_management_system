@@ -298,67 +298,124 @@ export function StudentPortalView() {
       {/* ------------------------------------------------------------- */}
       {/* 1. DASHBOARD / OVERVIEW TAB */}
       {/* ------------------------------------------------------------- */}
+      {/* ------------------------------------------------------------- */}
+      {/* 1. STUDENT DASHBOARD (Section 14: Clear Institutional Hierarchy) */}
+      {/* ------------------------------------------------------------- */}
       {(activeNavTab === 'dashboard' || !activeNavTab) && (
         <div className="space-y-6">
-          <PageHeader
-            title={currentUser.name}
-            badge={studentProfile.matricNumber}
-            badgeVariant="brand"
-            actions={
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleOpenAttestationLetter}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <FileText className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Attestation</span>
-                </button>
-                <button
-                  onClick={handleOpenTranscript}
-                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Official Transcript</span>
-                </button>
-              </div>
-            }
-          />
+          {/* Greeting & Academic Context Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                Welcome, {currentUser.name.split(' ')[0]}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1 font-medium">
+                {studentProfile.programme} • {studentProfile.currentLevel} Level • Semester 1
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs px-3 py-1 rounded-lg bg-blue-950/70 border border-blue-800/60 text-blue-300 font-semibold">
+                {studentProfile.matricNumber}
+              </span>
+              <button
+                onClick={handleOpenTranscript}
+                className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Transcript</span>
+              </button>
+            </div>
+          </div>
 
-          {/* Quick Metrics */}
+          {/* Quick Metrics: What is happening? */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             <StatCard
-              label="Cumulative CGPA"
-              value={studentProfile.cgpa.toFixed(2)}
-              subtext="Scale: 4.00 Max"
+              label="Current Fee Balance"
+              value="$0.00"
+              subtext="Fully Cleared & Settled"
               accentColor="#34d399"
+              icon={<CreditCard className="w-4 h-4" />}
+            />
+            <StatCard
+              label="Current GPA"
+              value={studentProfile.cgpa.toFixed(2)}
+              subtext="Scale: 4.00 (First Class Standing)"
+              accentColor="#60a5fa"
               icon={<Award className="w-4 h-4" />}
             />
             <StatCard
-              label="Credit Units"
-              value={`${studentProfile.totalCreditsEarned} / ${studentProfile.totalCreditsRequired}`}
-              subtext="81% Completion"
+              label="Enrolled Courses"
+              value={`${studentCourses.length} Courses`}
+              subtext={`${studentCourses.reduce((acc, c) => acc + c.creditUnits, 0)} Registered Credit Units`}
               icon={<BookOpenCheck className="w-4 h-4" />}
             />
             <StatCard
-              label="Semester Registration"
-              value="Cleared"
-              subtext="4 Courses (13 Units)"
+              label="Semester Attendance"
+              value="96.4%"
+              subtext="Good Standing (Senate Satisfied)"
+              accentColor="#38bdf8"
               icon={<CheckCircle className="w-4 h-4" />}
-            />
-            <StatCard
-              label="Bursary Balance"
-              value="$0.00"
-              subtext="Settled"
-              icon={<CreditCard className="w-4 h-4" />}
             />
           </div>
 
-          {/* Enrolled Courses Table */}
+          {/* Quick Actions: What should I do next? */}
+          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+              Quick Actions
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+              <button
+                onClick={() => setActiveNavTab('registration')}
+                className="p-3 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-left transition cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-200 group-hover:text-blue-400">
+                  <BookOpenCheck className="w-4 h-4 text-blue-400" />
+                  <span>Register Courses</span>
+                </div>
+                <span className="text-[11px] text-slate-500 block mt-1">Add or drop semester modules</span>
+              </button>
+
+              <button
+                onClick={() => setActiveNavTab('fees')}
+                className="p-3 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-left transition cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-200 group-hover:text-emerald-400">
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <span>Pay Fees</span>
+                </div>
+                <span className="text-[11px] text-slate-500 block mt-1">View invoices & receipts</span>
+              </button>
+
+              <button
+                onClick={() => setActiveNavTab('results')}
+                className="p-3 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-left transition cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-200 group-hover:text-amber-400">
+                  <Award className="w-4 h-4 text-amber-400" />
+                  <span>View Results</span>
+                </div>
+                <span className="text-[11px] text-slate-500 block mt-1">Semester grades & CGPA</span>
+              </button>
+
+              <button
+                onClick={() => setActiveNavTab('documents')}
+                className="p-3 rounded-lg bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-left transition cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-200 group-hover:text-purple-400">
+                  <FileText className="w-4 h-4 text-purple-400" />
+                  <span>Official Docs</span>
+                </div>
+                <span className="text-[11px] text-slate-500 block mt-1">Transcripts & attestations</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Enrolled Courses / Schedule */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-blue-400" />
-                Current Courses
+                Current Classes & Schedule
               </h3>
               <button
                 onClick={() => setActiveNavTab('courses')}

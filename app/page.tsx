@@ -88,13 +88,16 @@ function ERPAppContent() {
     }
   };
 
+  const isAdminUser = currentUser.portalAssignments.some(
+    a => a.portalId === 'ADMIN' && (a.isAdmin || a.roleId.includes('ADMIN') || a.roleId === 'ROLE_SUPER_ADMIN')
+  );
+
   // If active portal is the PUBLIC landing page, render dedicated institutional public layout
   if (activePortalId === 'PUBLIC') {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white">
         <PublicLandingPageView />
         <UnifiedLoginModal />
-        <SecurityTestSuiteModal />
       </div>
     );
   }
@@ -117,13 +120,19 @@ function ERPAppContent() {
         </main>
       </div>
 
-      {/* 3. Global Interactive Modals & Drawers */}
+      {/* 3. Global Interactive Modals */}
       <UnifiedLoginModal />
-      <SecurityTestSuiteModal />
-      <CustomRoleBuilderModal />
-      <CrossPortalEventsModal />
-      <AuditTrailDrawer />
-      <PortalHealthModal />
+
+      {/* 4. Restricted Admin Diagnostic Tools (Section 36: Only rendered for authorized administrators) */}
+      {isAdminUser && (
+        <>
+          <SecurityTestSuiteModal />
+          <CustomRoleBuilderModal />
+          <CrossPortalEventsModal />
+          <AuditTrailDrawer />
+          <PortalHealthModal />
+        </>
+      )}
     </div>
   );
 }
