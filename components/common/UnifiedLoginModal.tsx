@@ -173,11 +173,6 @@ export function UnifiedLoginModal() {
 
       const serverData = data.data;
 
-      // Store session ID if provided
-      if (serverData.sessionId && typeof window !== 'undefined') {
-        sessionStorage.setItem('erp_session_id', serverData.sessionId);
-      }
-
       // Verify that backend returned complete authoritative identity information
       // Do NOT invent missing fields or construct synthetic identity
       if (

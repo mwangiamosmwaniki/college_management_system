@@ -63,6 +63,7 @@ public class UserController {
                 .status(u.getStatus())
                 .roles(u.getRoles().stream().map(r -> r.getCode()).toList())
                 .permissions(u.getRoles().stream().flatMap(r -> r.getPermissions().stream()).map(p -> p.getCode()).distinct().toList())
+                .portalAssignments(AuthService.computePortalAssignments(u.getRoles().stream().map(r -> r.getCode()).toList()))
                 .build());
 
         return ApiResponse.success(PageResponse.from(dtoPage));

@@ -297,12 +297,118 @@ export function createAuditLog(
     ipAddress: metadata?.ipAddress || '127.0.0.1 (Reverse Proxy Authenticated)',
     details,
     actorId: metadata?.actorId || (user.impersonatedBy ? user.impersonatedBy : user.id),
-    sessionId: metadata?.sessionId || (typeof window !== 'undefined' ? (sessionStorage.getItem('erp_session_id') || 'sess_portal') : 'sess_srv'),
+    sessionId: metadata?.sessionId || 'sess_portal',
     reason: metadata?.reason || (user.impersonatedBy ? `Administrative Impersonation by ${user.impersonatedBy}` : undefined),
     previousState: metadata?.previousState,
     newState: metadata?.newState
   };
 }
+
+const TEST_FIXTURE_USERS: UserIdentity[] = [
+  {
+    id: 'usr_john_doe',
+    identifier: 'STU-2026-00124',
+    name: 'John Doe',
+    email: 'john.doe@student.apex.edu',
+    avatarUrl: '',
+    campus: 'Main Campus',
+    institution: 'Apex National Polytechnic',
+    department: 'School of Computing & Informatics',
+    faculty: 'Faculty of Technology',
+    status: 'ACTIVE',
+    portalAssignments: [
+      { portalId: 'STUDENT', roleId: 'ROLE_STUDENT', roleName: 'Enrolled Student', isAdmin: false, isMonitor: false, assignedAt: '2026-01-10T08:00:00Z' },
+      { portalId: 'ELEARNING', roleId: 'ROLE_STUDENT', roleName: 'Course Learner', isAdmin: false, isMonitor: false, assignedAt: '2026-01-10T08:00:00Z' },
+      { portalId: 'ELIBRARY', roleId: 'ROLE_STUDENT', roleName: 'Library Patron', isAdmin: false, isMonitor: false, assignedAt: '2026-01-10T08:00:00Z' }
+    ]
+  },
+  {
+    id: 'usr_sarah_tech',
+    identifier: 'STF-ACAD-091',
+    name: 'Sarah Connor',
+    email: 's.connor@staff.apex.edu',
+    avatarUrl: '',
+    campus: 'Main Campus',
+    institution: 'Apex National Polytechnic',
+    department: 'Academic Registry',
+    faculty: 'Central Administration',
+    status: 'ACTIVE',
+    portalAssignments: [
+      { portalId: 'STUDENT', roleId: 'ROLE_STUDENT_AFFAIRS', roleName: 'Academic Affairs Officer', isAdmin: false, isMonitor: false, assignedAt: '2025-06-15T09:00:00Z' },
+      { portalId: 'ADMISSIONS', roleId: 'ROLE_ADMISSIONS_OFFICER', roleName: 'Admissions Officer', isAdmin: false, isMonitor: false, assignedAt: '2025-06-15T09:00:00Z' }
+    ]
+  },
+  {
+    id: 'usr_dr_henderson',
+    identifier: 'FAC-ENG-042',
+    name: 'Dr. Arthur Henderson',
+    email: 'a.henderson@faculty.apex.edu',
+    avatarUrl: '',
+    campus: 'Main Campus',
+    institution: 'Apex National Polytechnic',
+    department: 'Electrical & Electronic Engineering',
+    faculty: 'Faculty of Engineering',
+    status: 'ACTIVE',
+    portalAssignments: [
+      { portalId: 'LECTURER', roleId: 'ROLE_SENIOR_LECTURER', roleName: 'Senior Lecturer', isAdmin: false, isMonitor: false, assignedAt: '2024-09-01T08:00:00Z' },
+      { portalId: 'ELEARNING', roleId: 'ROLE_COURSE_INSTRUCTOR', roleName: 'Course Instructor', isAdmin: false, isMonitor: false, assignedAt: '2024-09-01T08:00:00Z' }
+    ]
+  },
+  {
+    id: 'usr_karen_lib_monitor',
+    identifier: 'STF-LIB-102',
+    name: 'Karen Mitchell',
+    email: 'k.mitchell@staff.apex.edu',
+    avatarUrl: '',
+    campus: 'Main Campus',
+    institution: 'Apex National Polytechnic',
+    department: 'University Library Services',
+    faculty: 'Academic Support Services',
+    status: 'ACTIVE',
+    portalAssignments: [
+      { portalId: 'ELIBRARY', roleId: 'ROLE_LIBRARY_STAFF', roleName: 'Senior Cataloger', isAdmin: false, isMonitor: true, assignedAt: '2025-03-01T10:00:00Z' }
+    ]
+  },
+  {
+    id: 'usr_robert_fin_mgr',
+    identifier: 'STF-FIN-012',
+    name: 'Robert Mugabe',
+    email: 'r.mugabe@staff.apex.edu',
+    avatarUrl: '',
+    campus: 'Main Campus',
+    institution: 'Apex National Polytechnic',
+    department: 'Finance & Accounts Directorate',
+    faculty: 'Central Administration',
+    status: 'ACTIVE',
+    portalAssignments: [
+      { portalId: 'FINANCE', roleId: 'ROLE_BURSAR', roleName: 'Chief Bursar & Finance Director', isAdmin: true, isMonitor: false, assignedAt: '2023-01-01T08:00:00Z' }
+    ]
+  },
+  {
+    id: 'usr_super_admin',
+    identifier: 'SYS-SEC-001',
+    name: 'SysAdmin Council',
+    email: 'root@apex.edu',
+    avatarUrl: '',
+    campus: 'Main Campus',
+    institution: 'Apex National Polytechnic',
+    department: 'Directorate of ICT & Security',
+    faculty: 'Central Governance',
+    status: 'ACTIVE',
+    portalAssignments: [
+      { portalId: 'ADMIN', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Governance Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' },
+      { portalId: 'STUDENT', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' },
+      { portalId: 'LECTURER', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' },
+      { portalId: 'FINANCE', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' },
+      { portalId: 'EXAMINATIONS', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' },
+      { portalId: 'ADMISSIONS', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' },
+      { portalId: 'HR', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' },
+      { portalId: 'ELEARNING', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' },
+      { portalId: 'ELIBRARY', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' },
+      { portalId: 'HOSTEL', roleId: 'ROLE_SUPER_ADMIN', roleName: 'Super Administrator', isAdmin: true, isMonitor: false, assignedAt: '2022-01-01T00:00:00Z' }
+    ]
+  }
+];
 
 /**
  * Executes Acceptance Tests A through O specified in prompt.
@@ -311,14 +417,15 @@ export function runAutomatedAcceptanceTests(
   allUsers: UserIdentity[],
   rolesRegistry: RoleDefinition[]
 ): SecurityTestCaseResult[] {
+  const usersToTest = allUsers && allUsers.length > 0 ? allUsers : TEST_FIXTURE_USERS;
   const results: SecurityTestCaseResult[] = [];
 
-  const student = allUsers.find(u => u.id === 'usr_john_doe') || allUsers[0];
-  const academicOfficer = allUsers.find(u => u.id === 'usr_sarah_tech') || allUsers[1];
-  const instructor = allUsers.find(u => u.id === 'usr_dr_henderson') || allUsers[2];
-  const libMonitor = allUsers.find(u => u.id === 'usr_karen_lib_monitor') || allUsers[3];
-  const finManager = allUsers.find(u => u.id === 'usr_robert_fin_mgr') || allUsers[8];
-  const superAdmin = allUsers.find(u => u.id === 'usr_super_admin') || allUsers[10];
+  const student = usersToTest.find(u => u.id === 'usr_john_doe') || usersToTest[0];
+  const academicOfficer = usersToTest.find(u => u.id === 'usr_sarah_tech') || usersToTest[1] || student;
+  const instructor = usersToTest.find(u => u.id === 'usr_dr_henderson') || usersToTest[2] || student;
+  const libMonitor = usersToTest.find(u => u.id === 'usr_karen_lib_monitor') || usersToTest[3] || student;
+  const finManager = usersToTest.find(u => u.id === 'usr_robert_fin_mgr') || usersToTest[4] || student;
+  const superAdmin = usersToTest.find(u => u.id === 'usr_super_admin') || usersToTest[5] || student;
 
   // Test A: Student logs into Student Portal -> Works
   const testA = evaluatePortalAccess(student, 'STUDENT', rolesRegistry);

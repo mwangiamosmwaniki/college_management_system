@@ -1,150 +1,304 @@
-import test, { describe, it } from 'node:test';
+import test, { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  authenticateWithBackend,
-  validateSession,
-  invalidateSession,
-  getStudentData,
-  getStudentInvoices,
-  getInstitutionalUserList
-} from '../lib/server/auth-store.ts';
-import type { AuthSession } from '../lib/server/auth-store.ts';
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { proxyToBackend, getBackendApiUrl } from '../lib/server/backend-proxy.ts';
 
-describe('Authoritative Authentication and Security Boundary Tests', () => {
-  it('1. Authentication with valid credentials succeeds and creates a cryptographically signed session', async () => {
-    const result = await authenticateWithBackend('ADM-001', 'Password123!');
-    assert.strictEqual(result.success, true);
-    assert.ok(result.session);
-    assert.ok(result.session?.sessionId);
-    assert.strictEqual(result.session?.identifier, 'ADM-001');
-    assert.strictEqual(result.session?.fullName, 'Dr. Elizabeth Mutua');
-    assert.ok(result.session?.roles.includes('ADMIN'));
+describe('Spring Boot Gateway and Backend Proxy Boundary Tests', () => {
+  let mockBackendServer: http.Server;
+  let backendPort: number;
+  let backendBaseUrl: string;
 
-    // Validate the session in the store
-    const session = validateSession(result.session.sessionId);
-    assert.ok(session);
-    assert.strictEqual(session?.userId, result.session.userId);
-  });
+  before(async () => {
+    // Create a mock Spring Boot server to test proxy contract
+    mockBackendServer = http.createServer((req, res) => {
+      const url = req.url || '';
+      let body = '';
+      req.on('data', chunk => {
+        body += chunk;
+      });
 
-  it('2. Authentication with invalid password fails (401) with NO fallback identity manufacture', async () => {
-    const result = await authenticateWithBackend('ADM-001', 'WrongPassword123');
-    assert.strictEqual(result.success, false);
-    assert.strictEqual(result.statusCode, 401);
-    assert.strictEqual(result.message, 'Invalid credentials.');
-    assert.strictEqual(result.session, undefined);
-  });
+      req.on('end', () => {
+        // 1. POST /api/v1/auth/login
+        if (url.startsWith('/api/v1/auth/login') && req.method === 'POST') {
+          try {
+            const parsed = JSON.parse(body);
+            if (parsed.identifier === 'ADM-001' && parsed.password === 'CorrectPassword123!') {
+              res.writeHead(200, {
+                'Content-Type': 'application/json',
+                'Set-Cookie': 'SESSION=spring_session_token_xyz123; Path=/; HttpOnly; SameSite=Lax'
+              });
+              res.end(JSON.stringify({
+                success: true,
+                message: 'Authentication successful',
+                data: {
+                  id: 'usr_admin_1',
+                  userId: 'usr_admin_1',
+                  identifier: 'ADM-001',
+                  fullName: 'Dr. Elizabeth Mutua',
+                  email: 'e.mutua@apex.edu',
+                  roles: ['ADMIN'],
+                  portalAssignments: [
+                    {
+                      portalId: 'ADMIN',
+                      roleId: 'ROLE_ADMIN',
+                      roleName: 'System Administrator',
+                      isAdmin: true,
+                      isMonitor: false
+                    }
+                  ]
+                }
+              }));
+              return;
+            }
 
-  it('3. Authentication with non-existent user identifier fails (401) with NO fallback', async () => {
-    const result = await authenticateWithBackend('NON_EXISTENT_USER', 'Password123!');
-    assert.strictEqual(result.success, false);
-    assert.strictEqual(result.statusCode, 401);
-    assert.strictEqual(result.message, 'Invalid credentials.');
-    assert.strictEqual(result.session, undefined);
-  });
-
-  it('4. Session destruction terminates the authenticated principal', async () => {
-    const login = await authenticateWithBackend('LEC-CS-104', 'Password123!');
-    assert.ok(login.session);
-    const sid = login.session.sessionId;
-
-    assert.ok(validateSession(sid));
-    invalidateSession(sid);
-    assert.strictEqual(validateSession(sid), null);
-  });
-
-  it('5. Account Isolation & IDOR Protection: Student cannot access another student records', async () => {
-    const studentLogin = await authenticateWithBackend('STU-2026-001', 'Password123!');
-    assert.ok(studentLogin.session);
-    const studentSession = studentLogin.session;
-
-    // Student requesting own record
-    const ownRecord = getStudentData(studentSession, 'CIT/0042/2024');
-    assert.strictEqual(ownRecord.allowed, true);
-    assert.strictEqual(ownRecord.statusCode, 200);
-    assert.strictEqual(ownRecord.data.identifier, 'CIT/0042/2024');
-
-    // Student attempting to access another student's record (e.g. STU-2026-002)
-    const unauthorizedRecord = getStudentData(studentSession, 'CIT/9999/2024');
-    assert.strictEqual(unauthorizedRecord.allowed, false);
-    assert.strictEqual(unauthorizedRecord.statusCode, 403);
-    assert.ok(unauthorizedRecord.error?.includes('IDOR prevented'));
-    assert.strictEqual(unauthorizedRecord.data, undefined);
-  });
-
-  it('6. Role Boundaries: Student cannot access institutional user directory', async () => {
-    const studentLogin = await authenticateWithBackend('STU-2026-001', 'Password123!');
-    assert.ok(studentLogin.session);
-    const studentSession = studentLogin.session;
-
-    const userDirectoryResult = getInstitutionalUserList(studentSession);
-    assert.strictEqual(userDirectoryResult.allowed, false);
-    assert.strictEqual(userDirectoryResult.statusCode, 403);
-    assert.ok(userDirectoryResult.error?.includes('strictly restricted to System Administrators'));
-    assert.strictEqual(userDirectoryResult.data, undefined);
-  });
-
-  it('7. Role Boundaries: Lecturer cannot access student private invoices or user directory', async () => {
-    const lecturerLogin = await authenticateWithBackend('LEC-CS-104', 'Password123!');
-    assert.ok(lecturerLogin.session);
-    const lecturerSession = lecturerLogin.session;
-
-    const invoiceResult = getStudentInvoices(lecturerSession);
-    assert.strictEqual(invoiceResult.allowed, false);
-    assert.strictEqual(invoiceResult.statusCode, 403);
-    assert.ok(invoiceResult.error?.includes('Forbidden'));
-
-    const directoryResult = getInstitutionalUserList(lecturerSession);
-    assert.strictEqual(directoryResult.allowed, false);
-    assert.strictEqual(directoryResult.statusCode, 403);
-  });
-
-  it('8. Administrator can access institutional user directory filtered by tenant', async () => {
-    const adminLogin = await authenticateWithBackend('ADM-001', 'Password123!');
-    assert.ok(adminLogin.session);
-    const adminSession = adminLogin.session;
-
-    const directoryResult = getInstitutionalUserList(adminSession);
-    assert.strictEqual(directoryResult.allowed, true);
-    assert.strictEqual(directoryResult.statusCode, 200);
-    assert.ok(Array.isArray(directoryResult.data));
-    assert.ok(directoryResult.data.length > 0);
-
-    // Verify tenant isolation: all returned users must belong to the administrator's institution
-    for (const u of directoryResult.data) {
-      assert.ok(u.id);
-      assert.ok(u.identifier);
-    }
-  });
-
-  it('9. Tenant Isolation: Users from another tenant are never leaked', async () => {
-    // Create a mock session representing an administrator of an external tenant
-    const foreignTenantSession: AuthSession = {
-      sessionId: 'sess_foreign_tenant',
-      userId: 'usr_foreign_admin',
-      identifier: 'EXT-ADMIN-99',
-      email: 'admin@external-college.ac.ke',
-      fullName: 'Foreign Tenant Administrator',
-      institutionId: 'inst_external_polytechnic_99',
-      department: 'Central Administration',
-      faculty: 'Executive',
-      campus: 'Satellite Campus',
-      status: 'ACTIVE',
-      roles: ['ADMIN'],
-      permissions: ['*'],
-      portalAssignments: [
-        {
-          portalId: 'ADMIN',
-          roleId: 'ROLE_ADMIN',
-          roleName: 'System Administrator'
+            // Invalid credentials
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              success: false,
+              message: 'Invalid credentials.'
+            }));
+            return;
+          } catch {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, message: 'Malformed JSON' }));
+            return;
+          }
         }
-      ],
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 86400000
-    };
 
-    const foreignDirResult = getInstitutionalUserList(foreignTenantSession);
-    assert.strictEqual(foreignDirResult.allowed, true);
-    // Because the foreign tenant has no users in this tenant's directory, length must be 0
-    assert.strictEqual(foreignDirResult.data.length, 0);
+        // 2. GET /api/v1/auth/me
+        if (url.startsWith('/api/v1/auth/me') && req.method === 'GET') {
+          const cookieHeader = req.headers['cookie'] || '';
+          if (cookieHeader.includes('SESSION=spring_session_token_xyz123')) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              success: true,
+              data: {
+                id: 'usr_admin_1',
+                userId: 'usr_admin_1',
+                identifier: 'ADM-001',
+                fullName: 'Dr. Elizabeth Mutua',
+                email: 'e.mutua@apex.edu',
+                roles: ['ADMIN'],
+                portalAssignments: [
+                  {
+                    portalId: 'ADMIN',
+                    roleId: 'ROLE_ADMIN',
+                    roleName: 'System Administrator',
+                    isAdmin: true,
+                    isMonitor: false
+                  }
+                ]
+              }
+            }));
+            return;
+          }
+
+          // No valid session
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            message: 'Unauthorized: Session missing or expired'
+          }));
+          return;
+        }
+
+        // 3. POST /api/v1/auth/logout
+        if (url.startsWith('/api/v1/auth/logout') && req.method === 'POST') {
+          res.writeHead(200, {
+            'Content-Type': 'application/json',
+            'Set-Cookie': 'SESSION=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          });
+          res.end(JSON.stringify({
+            success: true,
+            message: 'Logged out successfully',
+            data: null
+          }));
+          return;
+        }
+
+        // 4. GET /api/v1/finance/invoices/student/:studentId (IDOR Protected in Spring Boot)
+        if (url.startsWith('/api/v1/finance/invoices/student/') && req.method === 'GET') {
+          const studentId = url.split('/').pop();
+          const cookieHeader = req.headers['cookie'] || '';
+          if (cookieHeader.includes('SESSION=student_session')) {
+            if (studentId === 'stu_authorized') {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true, data: [{ invoiceId: 'INV-100' }] }));
+              return;
+            } else {
+              res.writeHead(403, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: false, message: 'Forbidden: Access denied to requested record.' }));
+              return;
+            }
+          }
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, message: 'Unauthorized' }));
+          return;
+        }
+
+        // Default 404
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Not found' }));
+      });
+    });
+
+    await new Promise<void>((resolve) => {
+      mockBackendServer.listen(0, '127.0.0.1', () => {
+        const address = mockBackendServer.address() as { port: number };
+        backendPort = address.port;
+        backendBaseUrl = `http://127.0.0.1:${backendPort}`;
+        process.env.BACKEND_API_URL = backendBaseUrl;
+        resolve();
+      });
+    });
+  });
+
+  after(async () => {
+    await new Promise<void>((resolve) => {
+      mockBackendServer.close(() => resolve());
+    });
+  });
+
+  it('1. Architecture Mandate: lib/server/auth-store.ts is completely eliminated', () => {
+    const authStorePath = path.join(process.cwd(), 'lib', 'server', 'auth-store.ts');
+    assert.strictEqual(
+      fs.existsSync(authStorePath),
+      false,
+      'auth-store.ts MUST NOT exist in the repository'
+    );
+  });
+
+  it('2. Authentication with valid credentials proxies to Spring Boot and forwards Set-Cookie', async () => {
+    const nextReq = new Request('http://localhost:3000/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier: 'ADM-001',
+        password: 'CorrectPassword123!',
+        tenantId: 'inst_apex_tvet'
+      })
+    });
+
+    const res = await proxyToBackend(nextReq, '/api/v1/auth/login');
+    assert.strictEqual(res.status, 200);
+
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(data.data.identifier, 'ADM-001');
+    assert.ok(data.data.portalAssignments.length > 0);
+
+    // Verify Spring Boot session cookie was preserved
+    const setCookie = res.headers.get('set-cookie');
+    assert.ok(setCookie?.includes('SESSION=spring_session_token_xyz123'));
+  });
+
+  it('3. Authentication with invalid credentials returns 401 with NO manufactured fallback identity', async () => {
+    const nextReq = new Request('http://localhost:3000/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier: 'ADM-001',
+        password: 'WrongPassword123!',
+        tenantId: 'inst_apex_tvet'
+      })
+    });
+
+    const res = await proxyToBackend(nextReq, '/api/v1/auth/login');
+    assert.strictEqual(res.status, 401);
+
+    const data = await res.json();
+    assert.strictEqual(data.success, false);
+    assert.strictEqual(data.message, 'Invalid credentials.');
+  });
+
+  it('4. Authentication when Spring Boot is offline fails with 502 and NO local fallback', async () => {
+    // Temporarily point to a dead port
+    process.env.BACKEND_API_URL = 'http://127.0.0.1:59999';
+
+    const nextReq = new Request('http://localhost:3000/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier: 'ADM-001',
+        password: 'CorrectPassword123!',
+        tenantId: 'inst_apex_tvet'
+      })
+    });
+
+    const res = await proxyToBackend(nextReq, '/api/v1/auth/login');
+    assert.strictEqual(res.status, 502);
+
+    const data = await res.json();
+    assert.strictEqual(data.success, false);
+    assert.strictEqual(data.message, 'Unable to sign you in right now. Please try again.');
+
+    // Restore valid URL
+    process.env.BACKEND_API_URL = backendBaseUrl;
+  });
+
+  it('5. GET /api/v1/auth/me forwards session cookie and returns user identity', async () => {
+    const nextReq = new Request('http://localhost:3000/api/v1/auth/me', {
+      method: 'GET',
+      headers: {
+        'Cookie': 'SESSION=spring_session_token_xyz123'
+      }
+    });
+
+    const res = await proxyToBackend(nextReq, '/api/v1/auth/me');
+    assert.strictEqual(res.status, 200);
+
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(data.data.identifier, 'ADM-001');
+  });
+
+  it('6. GET /api/v1/auth/me without session returns 401 (NO fake user / default student)', async () => {
+    const nextReq = new Request('http://localhost:3000/api/v1/auth/me', {
+      method: 'GET',
+      headers: {}
+    });
+
+    const res = await proxyToBackend(nextReq, '/api/v1/auth/me');
+    assert.strictEqual(res.status, 401);
+
+    const data = await res.json();
+    assert.strictEqual(data.success, false);
+  });
+
+  it('7. IDOR Protection: Student cannot access other student finance records through proxy', async () => {
+    // Requesting unauthorized student record with student cookie
+    const nextReq = new Request('http://localhost:3000/api/v1/finance/invoices/student/stu_unauthorized', {
+      method: 'GET',
+      headers: {
+        'Cookie': 'SESSION=student_session'
+      }
+    });
+
+    const res = await proxyToBackend(nextReq, '/api/v1/finance/invoices/student/stu_unauthorized');
+    assert.strictEqual(res.status, 403);
+
+    const data = await res.json();
+    assert.strictEqual(data.success, false);
+    assert.ok(data.message.includes('Forbidden'));
+  });
+
+  it('8. Logout proxy forwards cookie invalidation', async () => {
+    const nextReq = new Request('http://localhost:3000/api/v1/auth/logout', {
+      method: 'POST',
+      headers: {
+        'Cookie': 'SESSION=spring_session_token_xyz123'
+      }
+    });
+
+    const res = await proxyToBackend(nextReq, '/api/v1/auth/logout');
+    assert.strictEqual(res.status, 200);
+
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+
+    const setCookie = res.headers.get('set-cookie');
+    assert.ok(setCookie?.includes('Expires=') || setCookie?.includes('SESSION=;'));
   });
 });

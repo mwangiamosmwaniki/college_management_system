@@ -38,7 +38,6 @@ import {
 import {
   PORTAL_REGISTRY,
   INITIAL_ROLES,
-  INITIAL_USERS,
   DEFAULT_INSTITUTIONAL_SETTINGS,
   MOCK_STUDENT_PROFILE,
   MOCK_STUDENT_COURSES,
@@ -279,10 +278,29 @@ export function ERPProvider({ children }: { children: ReactNode }) {
   // State
   const [portals, setPortals] = useState<PortalDefinition[]>(PORTAL_REGISTRY);
   const [roles, setRoles] = useState<RoleDefinition[]>(INITIAL_ROLES);
-  const [users, setUsers] = useState<UserIdentity[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<UserIdentity[]>([]);
   const [currentUser, setCurrentUser] = useState<UserIdentity>(PUBLIC_GUEST_USER);
   const [activePortalId, setActivePortalId] = useState<PortalId>('PUBLIC');
   const [activeNavTab, setActiveNavTab] = useState<string>('dashboard');
+
+  // Fetch users on-demand only for authorized administrative governance
+  useEffect(() => {
+    const isAdmin = currentUser.portalAssignments?.some(
+      a => a.portalId === 'ADMIN' && (a.roleId === 'ROLE_ADMIN' || a.roleId === 'ROLE_SUPER_ADMIN' || a.isAdmin)
+    );
+    if (isAdmin && activePortalId === 'ADMIN') {
+      fetch('/api/v1/users', { credentials: 'include' })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.success && Array.isArray(data.data)) {
+            setUsers(data.data);
+          }
+        })
+        .catch(() => {
+          // Backend unreachable or unauthorized; keep empty
+        });
+    }
+  }, [currentUser, activePortalId]);
 
   // Authoritative Session Restoration on App Mount
   useEffect(() => {
@@ -340,9 +358,6 @@ export function ERPProvider({ children }: { children: ReactNode }) {
       await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' });
     } catch {
       // ignore network errors on logout
-    }
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('erp_session_id');
     }
     setCurrentUser(PUBLIC_GUEST_USER);
     setActivePortalId('PUBLIC');
