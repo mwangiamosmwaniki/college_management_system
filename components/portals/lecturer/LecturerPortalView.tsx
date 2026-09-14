@@ -73,6 +73,9 @@ export function LecturerPortalView() {
   // Primary Domain State - Real server data
   const [courses, setCourses] = useState<LecturerCourseFull[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [activeAttendanceSession, setActiveAttendanceSession] = useState<LecturerAttendanceSession | null>(null);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
+  const [activeSubmission, setActiveSubmission] = useState<LecturerAssignmentSubmission | null>(null);
   const [attendanceSessions, setAttendanceSessions] = useState<LecturerAttendanceSession[]>([]);
   const [rubrics, setRubrics] = useState<LecturerGradingRubric[]>([]);
   const [questionBanks, setQuestionBanks] = useState<QuestionBankItem[]>([]);
@@ -84,14 +87,14 @@ export function LecturerPortalView() {
   const [tasks, setTasks] = useState<LecturerTaskItem[]>([]);
   const [meetings] = useState<LecturerMeetingSchedule[]>([]);
   const [workload, setWorkload] = useState<LecturerWorkloadStats>({
-    totalAssignedCourses: 0,
-    totalWeeklyCreditUnits: 0,
-    totalWeeklyContactHours: 0,
-    totalSupervisedStudents: 0,
-    maxAllowedCreditUnits: 18,
-    workloadStatus: 'OPTIMAL',
+    assignedCoursesCount: 0,
+    totalCreditHours: 0,
+    weeklyContactHours: 0,
+    totalStudentsTaught: 0,
+    supervisionCandidates: 0,
+    committeeAssignmentsCount: 0,
     officeHoursWeekly: 6,
-    breakdown: []
+    teachingLoadStatus: 'NORMAL'
   });
   const [requests, setRequests] = useState<LecturerResourceRequest[]>([]);
 
@@ -113,27 +116,14 @@ export function LecturerPortalView() {
 
         if (workloadRes.data) {
           setWorkload({
-            totalAssignedCourses: workloadRes.data.totalCourses,
-            totalWeeklyCreditUnits: workloadRes.data.totalCreditHours,
-            totalWeeklyContactHours: workloadRes.data.totalCreditHours * 2,
-            totalSupervisedStudents: workloadRes.data.totalStudents,
-            maxAllowedCreditUnits: 18,
-            workloadStatus: 'OPTIMAL',
+            assignedCoursesCount: workloadRes.data.totalCourses || 0,
+            totalCreditHours: workloadRes.data.totalCreditHours || 0,
+            weeklyContactHours: (workloadRes.data.totalCreditHours || 0) * 2,
+            totalStudentsTaught: workloadRes.data.totalStudents || 0,
+            supervisionCandidates: 2,
+            committeeAssignmentsCount: 1,
             officeHoursWeekly: 6,
-            breakdown: [
-              {
-                activityType: 'DIRECT_TEACHING',
-                hoursWeekly: workloadRes.data.totalCreditHours * 2,
-                weightUnits: workloadRes.data.totalCreditHours,
-                description: 'Lecture delivery & tutorial supervision'
-              },
-              {
-                activityType: 'STUDENT_CONSULTATION',
-                hoursWeekly: 4,
-                weightUnits: 2,
-                description: 'Academic advising & office hours'
-              }
-            ]
+            teachingLoadStatus: 'NORMAL'
           });
         }
 
@@ -367,9 +357,6 @@ export function LecturerPortalView() {
 
   // Active selected entities for drilldown / modal states
   const activeCourse = courses.find(c => c.id === selectedCourseId) || courses[0] || DEFAULT_FALLBACK_COURSE;
-  const [activeAttendanceSession, setActiveAttendanceSession] = useState<LecturerAttendanceSession | null>(null);
-  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
-  const [activeSubmission, setActiveSubmission] = useState<LecturerAssignmentSubmission | null>(null);
 
   // New item modal form states
   const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState(false);

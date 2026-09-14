@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useERP } from '@/context/erp-context';
 import { StudentRequest, AcademicCourse } from '@/types/erp';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -57,16 +57,17 @@ export function StudentPortalView() {
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
 
   // State for Academic Registration
-  const [registeredCoursesList, setRegisteredCoursesList] = useState<AcademicCourse[]>(studentCourses || []);
+  const [courseStatusOverrides, setCourseStatusOverrides] = useState<Record<string, 'REGISTERED' | 'AVAILABLE'>>({});
   const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
   const [regSearch, setRegSearch] = useState('');
   const [regCategoryFilter, setRegCategoryFilter] = useState('ALL');
 
-  useEffect(() => {
-    if (studentCourses && studentCourses.length > 0) {
-      setRegisteredCoursesList(studentCourses);
-    }
-  }, [studentCourses]);
+  const registeredCoursesList: AcademicCourse[] = useMemo(() => {
+    return (studentCourses || []).map(course => ({
+      ...course,
+      status: courseStatusOverrides[course.id] || course.status
+    }));
+  }, [studentCourses, courseStatusOverrides]);
 
   // Filter state for timetable
   const [selectedDay, setSelectedDay] = useState<string>('ALL');
@@ -247,20 +248,20 @@ export function StudentPortalView() {
   };
 
   const handleToggleCourseRegistration = (courseId: string) => {
-    setRegisteredCoursesList(prev => prev.map(course => {
-      if (course.id === courseId) {
-        const newStatus = course.status === 'REGISTERED' ? 'AVAILABLE' : 'REGISTERED';
-        logAction(
-          'STUDENT',
-          'UPDATE',
-          'Academic Registration',
-          'GRANTED',
-          `Toggled course ${course.code} status to ${newStatus}`
-        );
-        return { ...course, status: newStatus };
-      }
-      return course;
+    const course = registeredCoursesList.find(c => c.id === courseId);
+    if (!course) return;
+    const newStatus = course.status === 'REGISTERED' ? 'AVAILABLE' : 'REGISTERED';
+    setCourseStatusOverrides(prev => ({
+      ...prev,
+      [courseId]: newStatus
     }));
+    logAction(
+      'STUDENT',
+      'UPDATE',
+      'Academic Registration',
+      'GRANTED',
+      `Toggled course ${course.code} status to ${newStatus}`
+    );
   };
 
   const handleCommitCourseRegistration = () => {

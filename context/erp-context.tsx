@@ -490,7 +490,14 @@ export function ERPProvider({ children }: { children: ReactNode }) {
                 id: mc.id,
                 code: mc.code,
                 title: mc.title,
-                instructor: mc.instructorName,
+                faculty: currentUser.faculty || 'School of Computing',
+                department: currentUser.department || 'Computer Science',
+                leadInstructorId: 'inst_1',
+                leadInstructorName: mc.instructorName || 'Lead Instructor',
+                instructorIds: ['inst_1'],
+                taIds: [],
+                enrolledStudentsCount: 45,
+                thumbnail: 'https://picsum.photos/seed/lms/600/400',
                 progressPercentage: 45,
                 announcements: [
                   {
@@ -498,21 +505,20 @@ export function ERPProvider({ children }: { children: ReactNode }) {
                     title: `Welcome to ${mc.title}`,
                     date: '2026-09-01',
                     content: 'Course syllabus and reading materials have been posted.',
-                    author: mc.instructorName
+                    author: mc.instructorName || 'Lead Instructor'
                   }
                 ],
                 modules: [
                   {
                     id: `mod_${mc.id}_1`,
                     title: 'Module 1: Fundamental Concepts',
-                    week: 1,
-                    isPublished: true,
-                    items: [
+                    order: 1,
+                    lessons: [
                       {
                         id: `item_${mc.id}_1`,
                         title: 'Lecture Slides & Notes',
-                        type: 'DOCUMENT',
-                        isLocked: false,
+                        type: 'SLIDES',
+                        durationMinutes: 45,
                         completed: true
                       }
                     ]
@@ -523,14 +529,16 @@ export function ERPProvider({ children }: { children: ReactNode }) {
                     id: `asg_${mc.id}_1`,
                     courseId: mc.id,
                     title: 'Practical Project Assignment',
+                    description: 'Complete hands-on lab exercise and submit documentation.',
                     dueDate: '2026-09-30',
                     maxPoints: 100,
-                    status: 'PENDING',
+                    weightPercentage: 20,
                     submissionsCount: 0,
+                    gradedCount: 0,
                     submissions: []
                   }
                 ],
-                liveSessions: []
+                quizzes: []
               }))
             );
           }
@@ -608,12 +616,16 @@ export function ERPProvider({ children }: { children: ReactNode }) {
                 id: b.id,
                 isbn: b.isbn || 'N/A',
                 title: b.title,
-                author: b.author,
+                authors: [b.author || 'Faculty Contributor'],
+                edition: '1st Edition',
+                publisher: 'University Press',
+                year: 2024,
                 category: b.category || 'General',
+                callNumber: `QA76.${b.title.charCodeAt(0)}`,
                 totalCopies: b.totalCopies,
                 availableCopies: b.availableCopies,
                 shelfLocation: b.shelfLocation || 'Section A',
-                callNumber: `QA76.${b.title.charCodeAt(0)}`
+                coverImage: 'https://picsum.photos/seed/book/300/400'
               }))
             );
           }
@@ -622,12 +634,16 @@ export function ERPProvider({ children }: { children: ReactNode }) {
               loansRes.data.map(l => ({
                 id: l.id,
                 bookId: l.copyId,
+                bookTitle: 'Library Resource',
                 userId: l.userId,
-                borrowDate: l.borrowedAt,
+                userName: currentUser.name,
+                userIdentifier: currentUser.identifier,
+                borrowedAt: l.borrowedAt,
                 dueDate: l.dueDate,
-                returnDate: l.returnedAt,
-                status: l.status,
-                fineAmount: l.fineAmount || 0
+                returnedAt: l.returnedAt,
+                status: (l.status as any) || 'ACTIVE',
+                fineAccrued: l.fineAmount || 0,
+                fineStatus: (l.fineAmount && l.fineAmount > 0) ? 'UNPAID' : 'NONE'
               }))
             );
           }
@@ -649,8 +665,8 @@ export function ERPProvider({ children }: { children: ReactNode }) {
                 amount: inv.amount,
                 paidAmount: inv.amount - (inv.balance || 0),
                 balance: inv.balance || 0,
-                dueDate: inv.dueDate,
-                status: inv.status,
+                dueDate: inv.dueDate || '2026-10-31',
+                status: inv.status === 'CANCELLED' ? 'UNPAID' : inv.status,
                 items: [{ description: 'Billed Academic Fees', amount: inv.amount }],
                 receipts: []
               }))
@@ -663,18 +679,20 @@ export function ERPProvider({ children }: { children: ReactNode }) {
           a => (a.portalId === 'ADMIN' || a.portalId === 'EXAMINATIONS') && (a.isAdmin || a.roleId.includes('ADMIN') || a.roleId.includes('AUDITOR'))
         );
         if (isAuditUser && isMounted) {
-          const auditRes = await auditApi.getLogs();
-          if (auditRes.success && Array.isArray(auditRes.data) && isMounted) {
+          const auditRes = await auditApi.getAuditLogs(0, 50);
+          if (auditRes.success && auditRes.data?.content && isMounted) {
             setAuditLogs(
-              auditRes.data.map(a => ({
+              auditRes.data.content.map(a => ({
                 id: a.id,
-                timestamp: a.timestamp,
-                userId: a.userId || 'SYSTEM',
-                userName: a.username || 'System User',
-                userRole: 'Staff',
+                timestamp: a.createdAt,
+                userId: a.actorId || 'SYSTEM',
+                userName: a.actorIdentifier || 'System Operator',
+                userIdentifier: a.actorIdentifier || 'SYS-OP-01',
                 portalId: 'ADMIN',
+                roleName: 'System Auditor',
                 action: a.action,
-                resource: a.resource,
+                resource: a.resourceType,
+                resourceId: a.resourceId,
                 ipAddress: a.ipAddress || '127.0.0.1',
                 status: a.status === 'SUCCESS' ? 'GRANTED' : 'DENIED',
                 details: a.details || ''
