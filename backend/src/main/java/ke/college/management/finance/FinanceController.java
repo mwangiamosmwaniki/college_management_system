@@ -178,6 +178,7 @@ public class FinanceController {
     @PostMapping("/payments/mpesa/stk-push")
     @Operation(summary = "Initiate real M-Pesa STK Push payment")
     public ApiResponse<MpesaTransaction> initiateMpesaPayment(@RequestBody MpesaInitiateRequest request) {
+        validateStudentAccess(request.getStudentId());
         MpesaTransaction tx = paymentService.initiateMpesaStkPush(
                 request.getStudentId(),
                 request.getInvoiceId(),
@@ -192,6 +193,10 @@ public class FinanceController {
     @Operation(summary = "Get status of an M-Pesa payment transaction")
     public ApiResponse<MpesaTransaction> getMpesaTransaction(@PathVariable String id) {
         MpesaTransaction tx = paymentService.getTransaction(id);
+        SecurityUtils.validateTenantAccess(tx.getInstitutionId());
+        if (tx.getStudentId() != null) {
+            validateStudentAccess(tx.getStudentId());
+        }
         return ApiResponse.success(tx);
     }
 

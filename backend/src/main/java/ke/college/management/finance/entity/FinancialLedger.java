@@ -52,4 +52,18 @@ public class FinancialLedger {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    public BigDecimal getDebit() {
+        if ("INVOICE_CHARGE".equals(entryType) || "REFUND_DEBIT".equals(entryType) || "REVERSAL_DEBIT".equals(entryType)) {
+            return amount != null ? amount : BigDecimal.ZERO;
+        }
+        return BigDecimal.ZERO;
+    }
+
+    public BigDecimal getCredit() {
+        if ("PAYMENT_CREDIT".equals(entryType) || "WAIVER_CREDIT".equals(entryType)) {
+            return amount != null ? amount : BigDecimal.ZERO;
+        }
+        return BigDecimal.ZERO;
+    }
 }

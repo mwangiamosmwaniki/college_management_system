@@ -1,6 +1,7 @@
 package ke.college.management.security;
 
 import ke.college.management.exceptions.BusinessRuleException;
+import ke.college.management.exceptions.RateLimitExceededException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -60,12 +61,12 @@ public class RateLimiterService {
 
         // Allow up to 20 attempts per 10 minutes per IP
         if (!tryAcquire(ipKey, 20, Duration.ofMinutes(10))) {
-            throw new BusinessRuleException("Too many login attempts from this IP address. Please wait 10 minutes.");
+            throw new RateLimitExceededException("Too many login attempts from this IP address. Please wait 10 minutes.");
         }
 
         // Allow up to 5 failed attempts per 5 minutes per account
         if (!tryAcquire(accountKey, 5, Duration.ofMinutes(5))) {
-            throw new BusinessRuleException("Too many consecutive login attempts for this account. Please wait 5 minutes before trying again.");
+            throw new RateLimitExceededException("Too many consecutive login attempts for this account. Please wait 5 minutes before trying again.");
         }
     }
 
@@ -85,17 +86,17 @@ public class RateLimiterService {
         String accountKey = "rl:pwd_reset:acc:" + identifier.toLowerCase().trim();
 
         if (!tryAcquire(ipKey, 5, Duration.ofHours(1))) {
-            throw new BusinessRuleException("Password reset request limit exceeded for this IP. Try again in an hour.");
+            throw new RateLimitExceededException("Password reset request limit exceeded for this IP. Try again in an hour.");
         }
         if (!tryAcquire(accountKey, 3, Duration.ofHours(1))) {
-            throw new BusinessRuleException("Password reset requests exceeded for this account. Try again in an hour.");
+            throw new RateLimitExceededException("Password reset requests exceeded for this account. Try again in an hour.");
         }
     }
 
     public void checkSensitiveOpRateLimit(String userId, String operation) {
         String key = "rl:sensitive:" + operation + ":" + userId;
         if (!tryAcquire(key, 10, Duration.ofMinutes(1))) {
-            throw new BusinessRuleException("Rate limit exceeded for sensitive operation: " + operation + ". Please slow down.");
+            throw new RateLimitExceededException("Rate limit exceeded for sensitive operation: " + operation + ". Please slow down.");
         }
     }
 }

@@ -2,7 +2,11 @@ package ke.college.management.academics;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import ke.college.management.academics.dto.LecturerClassDto;
+import ke.college.management.academics.dto.LecturerStudentDto;
 import ke.college.management.academics.entity.Course;
+import ke.college.management.academics.entity.CourseEnrollment;
+import ke.college.management.academics.repository.CourseEnrollmentRepository;
 import ke.college.management.academics.repository.CourseRepository;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.security.SecurityUtils;
@@ -18,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/lecturers")
@@ -27,6 +32,7 @@ public class LecturerController {
 
     private final CourseRepository courseRepository;
     private final StudentRepository studentRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
 
     @GetMapping("/me/courses")
     @PreAuthorize("isAuthenticated()")
@@ -39,27 +45,25 @@ public class LecturerController {
     @GetMapping("/me/classes")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get classes assigned to currently authenticated lecturer")
-    public ApiResponse<List<Map<String, Object>>> getMyClasses() {
+    public ApiResponse<List<LecturerClassDto>> getMyClasses() {
         String userId = SecurityUtils.getCurrentUserId();
-        String institutionId = SecurityUtils.getCurrentInstitutionId();
         List<Course> courses = courseRepository.findByLecturerUserId(userId);
 
-        List<Map<String, Object>> classes = new ArrayList<>();
+        List<LecturerClassDto> classes = new ArrayList<>();
         for (Course course : courses) {
-            Map<String, Object> classInfo = new HashMap<>();
-            classInfo.put("courseId", course.getId());
-            classInfo.put("code", course.getCode());
-            classInfo.put("name", course.getName());
-            classInfo.put("programId", course.getProgramId());
-            classInfo.put("creditHours", course.getCreditHours());
-            classInfo.put("semester", course.getSemester());
+            int enrolledCount = courseEnrollmentRepository
+                    .findByCourseIdAndStatus(course.getId(), "ENROLLED")
+                    .size();
 
-            // Count enrolled students in this program
-            List<Student> students = studentRepository.findByInstitutionIdAndProgramIdIn(
-                    institutionId, List.of(course.getProgramId())
-            );
-            classInfo.put("enrolledCount", students.size());
-            classes.add(classInfo);
+            classes.add(LecturerClassDto.builder()
+                    .courseId(course.getId())
+                    .code(course.getCode())
+                    .name(course.getName())
+                    .programId(course.getProgramId())
+                    .creditHours(course.getCreditHours())
+                    .semester(course.getSemester())
+                    .enrolledCount(enrolledCount)
+                    .build());
         }
 
         return ApiResponse.success(classes);
@@ -68,7 +72,7 @@ public class LecturerController {
     @GetMapping("/me/students")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get students under supervision of currently authenticated lecturer")
-    public ApiResponse<List<Student>> getMyStudents() {
+    public ApiResponse<List<LecturerStudentDto>> getMyStudents() {
         String userId = SecurityUtils.getCurrentUserId();
         String institutionId = SecurityUtils.getCurrentInstitutionId();
         List<Course> courses = courseRepository.findByLecturerUserId(userId);
@@ -77,13 +81,39 @@ public class LecturerController {
             return ApiResponse.success(List.of());
         }
 
-        List<String> programIds = courses.stream()
-                .map(Course::getProgramId)
-                .distinct()
-                .toList();
+        List<String> courseIds = courses.stream().map(Course::getId).toList();
+        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByCourseIdInAndStatus(courseIds, "ENROLLED");
+        if (enrollments.isEmpty()) {
+            return ApiResponse.success(List.of());
+        }
 
-        List<Student> students = studentRepository.findByInstitutionIdAndProgramIdIn(institutionId, programIds);
-        return ApiResponse.success(students);
+        Map<String, Course> courseMap = courses.stream().collect(Collectors.toMap(Course::getId, c -> c));
+        List<String> studentIds = enrollments.stream().map(CourseEnrollment::getStudentId).distinct().toList();
+
+        Map<String, Student> studentMap = studentRepository.findAllById(studentIds).stream()
+                .filter(s -> institutionId.equals(s.getInstitutionId()))
+                .collect(Collectors.toMap(Student::getId, s -> s));
+
+        List<LecturerStudentDto> result = new ArrayList<>();
+        for (CourseEnrollment enrollment : enrollments) {
+            Student student = studentMap.get(enrollment.getStudentId());
+            Course course = courseMap.get(enrollment.getCourseId());
+            if (student != null && course != null) {
+                result.add(LecturerStudentDto.builder()
+                        .id(student.getId())
+                        .admissionNumber(student.getAdmissionNumber())
+                        .fullName(student.getFullName())
+                        .gender(student.getGender())
+                        .programId(student.getProgramId())
+                        .courseId(course.getId())
+                        .courseCode(course.getCode())
+                        .courseName(course.getName())
+                        .enrollmentStatus(enrollment.getStatus())
+                        .build());
+            }
+        }
+
+        return ApiResponse.success(result);
     }
 
     @GetMapping("/me/workload")
@@ -91,17 +121,21 @@ public class LecturerController {
     @Operation(summary = "Get teaching workload summary for currently authenticated lecturer")
     public ApiResponse<Map<String, Object>> getMyWorkload() {
         String userId = SecurityUtils.getCurrentUserId();
-        String institutionId = SecurityUtils.getCurrentInstitutionId();
         List<Course> courses = courseRepository.findByLecturerUserId(userId);
 
         int totalCreditHours = courses.stream().mapToInt(c -> c.getCreditHours() != null ? c.getCreditHours() : 3).sum();
-        List<String> programIds = courses.stream().map(Course::getProgramId).distinct().toList();
-        int totalStudents = programIds.isEmpty() ? 0 : studentRepository.findByInstitutionIdAndProgramIdIn(institutionId, programIds).size();
+        List<String> courseIds = courses.stream().map(Course::getId).toList();
+
+        long totalUniqueStudents = courseIds.isEmpty() ? 0 :
+                courseEnrollmentRepository.findByCourseIdInAndStatus(courseIds, "ENROLLED").stream()
+                        .map(CourseEnrollment::getStudentId)
+                        .distinct()
+                        .count();
 
         Map<String, Object> workload = new HashMap<>();
         workload.put("totalCourses", courses.size());
         workload.put("totalCreditHours", totalCreditHours);
-        workload.put("totalStudents", totalStudents);
+        workload.put("totalStudents", (int) totalUniqueStudents);
         workload.put("assignedClasses", courses.size());
 
         return ApiResponse.success(workload);

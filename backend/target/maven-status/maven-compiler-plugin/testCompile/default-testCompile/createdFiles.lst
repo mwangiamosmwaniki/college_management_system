@@ -1,0 +1,8 @@
+ke/college/management/academics/CourseEnrollmentAndScopingSecurityTests.class
+ke/college/management/security/SecurityAndTenantIsolationTests.class
+ke/college/management/testfixtures/TestEnvironmentFixture.class
+ke/college/management/auth/AuthAndRateLimitingTests.class
+ke/college/management/finance/MpesaAndFinanceTests.class
+ke/college/management/admissions/AdmissionsAndDocumentIntegrityTests.class
+ke/college/management/CollegeManagementApplicationTests.class
+ke/college/management/finance/FinanceLedgerAndAllocationTests.class

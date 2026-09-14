@@ -42,4 +42,16 @@ public class AccountActivationToken {
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
+
+    public boolean isUsed() {
+        return used;
+    }
+
+    public boolean getUsed() {
+        return used;
+    }
+
+    public void setUsed(boolean used) {
+        this.used = used;
+    }
 }

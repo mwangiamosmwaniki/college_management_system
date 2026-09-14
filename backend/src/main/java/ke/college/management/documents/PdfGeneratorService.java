@@ -120,7 +120,7 @@ public class PdfGeneratorService {
         public byte[] build() {
             try {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
-                out.write("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n".getBytes(StandardCharsets.ISO_8859_1));
+                out.write("%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n".getBytes(StandardCharsets.ISO_8859_1));
 
                 List<Long> offsets = new ArrayList<>();
 

@@ -26,6 +26,8 @@ public class CreateInvoiceRequest {
     @NotBlank(message = "Invoice title is required")
     private String title;
 
+    private String description;
+
     @NotNull(message = "Invoice amount is required")
     @DecimalMin(value = "1.00", message = "Amount must be at least 1.00")
     private BigDecimal amount;

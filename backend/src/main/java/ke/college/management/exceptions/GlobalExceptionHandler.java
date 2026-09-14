@@ -63,6 +63,22 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage(), null, requestId));
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRateLimitExceeded(RateLimitExceededException ex) {
+        String requestId = UUID.randomUUID().toString();
+        log.warn("Rate limit exceeded [{}]: {}", requestId, ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.error(ex.getMessage(), null, requestId));
+    }
+
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessRuleException(BusinessRuleException ex) {
+        String requestId = UUID.randomUUID().toString();
+        log.warn("Business rule violation [{}]: {}", requestId, ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage(), null, requestId));
+    }
+
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadRequest(BadRequestException ex) {
         String requestId = UUID.randomUUID().toString();

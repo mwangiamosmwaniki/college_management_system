@@ -234,7 +234,7 @@ public class PaymentService {
                 .amount(request.getAmount())
                 .issuedAt(Instant.now())
                 .issuedBy(currentUserId)
-                .qr_code_hash(UUID.randomUUID().toString().replace("-", ""))
+                .qrCodeHash(UUID.randomUUID().toString().replace("-", ""))
                 .cancelled(false)
                 .build();
         receiptRepository.save(receipt);
@@ -505,7 +505,7 @@ public class PaymentService {
                     .amount(tx.getAmount())
                     .issuedAt(Instant.now())
                     .issuedBy("SYSTEM_MPESA_GATEWAY")
-                    .qr_code_hash(UUID.randomUUID().toString().replace("-", ""))
+                    .qrCodeHash(UUID.randomUUID().toString().replace("-", ""))
                     .cancelled(false)
                     .build();
             receiptRepository.save(receipt);
@@ -567,7 +567,7 @@ public class PaymentService {
                             .referenceId(savedPayment.getId())
                             .amount(tx.getAmount())
                             .runningBalance(newBal)
-                            .description("M-Pesa payment received. Receipt: " + receiptNumber + ", Code: " + mpesaCode)
+                            .description("M-Pesa payment received. Receipt: " + finalReceiptNumber + ", Code: " + finalMpesaCode)
                             .transactionDate(Instant.now())
                             .createdBy("SYSTEM_MPESA_GATEWAY")
                             .createdAt(Instant.now())

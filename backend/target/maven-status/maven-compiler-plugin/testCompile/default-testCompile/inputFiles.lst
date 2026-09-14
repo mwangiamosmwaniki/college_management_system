@@ -1,0 +1,8 @@
+/app/applet/backend/src/test/java/ke/college/management/CollegeManagementApplicationTests.java
+/app/applet/backend/src/test/java/ke/college/management/academics/CourseEnrollmentAndScopingSecurityTests.java
+/app/applet/backend/src/test/java/ke/college/management/admissions/AdmissionsAndDocumentIntegrityTests.java
+/app/applet/backend/src/test/java/ke/college/management/auth/AuthAndRateLimitingTests.java
+/app/applet/backend/src/test/java/ke/college/management/finance/FinanceLedgerAndAllocationTests.java
+/app/applet/backend/src/test/java/ke/college/management/finance/MpesaAndFinanceTests.java
+/app/applet/backend/src/test/java/ke/college/management/security/SecurityAndTenantIsolationTests.java
+/app/applet/backend/src/test/java/ke/college/management/testfixtures/TestEnvironmentFixture.java

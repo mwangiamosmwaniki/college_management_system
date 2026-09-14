@@ -13,6 +13,8 @@ public interface FinancialLedgerRepository extends JpaRepository<FinancialLedger
 
     List<FinancialLedger> findByStudentIdOrderByCreatedAtAsc(String studentId);
 
+    List<FinancialLedger> findByStudentId(String studentId);
+
     Page<FinancialLedger> findByInstitutionId(String institutionId, Pageable pageable);
 
     Page<FinancialLedger> findByStudentId(String studentId, Pageable pageable);

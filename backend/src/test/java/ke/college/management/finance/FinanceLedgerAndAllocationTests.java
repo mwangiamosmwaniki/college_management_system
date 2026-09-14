@@ -56,16 +56,16 @@ class FinanceLedgerAndAllocationTests {
 
     @BeforeEach
     void setUp() {
-        CustomUserDetails userDetails = new CustomUserDetails(
-                "usr_finance_admin",
-                "admin@apex.edu",
-                "FIN-001",
-                "hashed",
-                "inst_apex_tvet",
-                "Finance Officer",
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("FINANCE_MANAGE")),
-                true
-        );
+        CustomUserDetails userDetails = CustomUserDetails.builder()
+                .id("usr_finance_admin")
+                .email("admin@apex.edu")
+                .identifier("FIN-001")
+                .password("hashed")
+                .institutionId("inst_apex_tvet")
+                .fullName("Finance Officer")
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("FINANCE_MANAGE")))
+                .active(true)
+                .build();
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
         SecurityContextHolder.setContext(context);

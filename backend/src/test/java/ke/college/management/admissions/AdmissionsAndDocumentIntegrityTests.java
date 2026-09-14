@@ -73,8 +73,8 @@ class AdmissionsAndDocumentIntegrityTests {
         Institution institution = Institution.builder()
                 .id(institutionId)
                 .name("Apex Institute of Technology")
-                .code("APEX")
-                .status("ACTIVE")
+                .shortName("APEX")
+                .isActive(true)
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build();
@@ -87,7 +87,6 @@ class AdmissionsAndDocumentIntegrityTests {
                 .code("MAIN")
                 .isActive(true)
                 .createdAt(Instant.now())
-                .updatedAt(Instant.now())
                 .build();
         campusRepository.save(campus);
     }

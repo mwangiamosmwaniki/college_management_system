@@ -2,13 +2,17 @@ package ke.college.management.students;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import ke.college.management.academics.dto.StudentEnrolledCourseDto;
 import ke.college.management.academics.entity.Course;
+import ke.college.management.academics.entity.CourseEnrollment;
 import ke.college.management.academics.entity.StudentMark;
+import ke.college.management.academics.repository.CourseEnrollmentRepository;
 import ke.college.management.academics.repository.CourseRepository;
 import ke.college.management.academics.repository.StudentMarkRepository;
 import ke.college.management.audit.AuditService;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.common.PageResponse;
+import ke.college.management.exceptions.BusinessRuleException;
 import ke.college.management.exceptions.ResourceNotFoundException;
 import ke.college.management.exceptions.UnauthorizedException;
 import ke.college.management.finance.entity.Invoice;
@@ -24,6 +28,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,10 +39,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/students")
@@ -47,6 +55,7 @@ public class StudentController {
 
     private final StudentRepository studentRepository;
     private final CourseRepository courseRepository;
+    private final CourseEnrollmentRepository courseEnrollmentRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final StudentMarkRepository studentMarkRepository;
@@ -85,15 +94,148 @@ public class StudentController {
     @GetMapping("/me/courses")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get enrolled courses for current logged-in student")
-    public ApiResponse<List<Course>> getMyCourses() {
+    public ApiResponse<List<StudentEnrolledCourseDto>> getMyCourses() {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
         String currentUserId = SecurityUtils.getCurrentUserId();
 
         Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
 
-        List<Course> courses = courseRepository.findByProgramId(student.getProgramId());
-        return ApiResponse.success(courses);
+        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByStudentIdAndStatus(student.getId(), "ENROLLED");
+        if (enrollments.isEmpty()) {
+            return ApiResponse.success(List.of());
+        }
+
+        List<String> courseIds = enrollments.stream().map(CourseEnrollment::getCourseId).toList();
+        Map<String, Course> courseMap = courseRepository.findAllById(courseIds).stream()
+                .collect(Collectors.toMap(Course::getId, c -> c));
+
+        List<StudentEnrolledCourseDto> result = enrollments.stream()
+                .filter(e -> courseMap.containsKey(e.getCourseId()))
+                .map(e -> {
+                    Course c = courseMap.get(e.getCourseId());
+                    return StudentEnrolledCourseDto.builder()
+                            .id(c.getId())
+                            .enrollmentId(e.getId())
+                            .courseId(c.getId())
+                            .code(c.getCode())
+                            .name(c.getName())
+                            .creditHours(c.getCreditHours())
+                            .semester(c.getSemester())
+                            .academicTermId(e.getAcademicTermId())
+                            .status(e.getStatus())
+                            .enrollmentDate(e.getEnrollmentDate())
+                            .build();
+                })
+                .toList();
+
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/me/courses/{courseId}/enroll")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Authoritatively enroll currently authenticated student into a course")
+    public ApiResponse<StudentEnrolledCourseDto> enrollInCourse(@PathVariable String courseId) {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
+
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
+
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Course not found: " + courseId));
+
+        // Validate that course belongs to student's program
+        if (student.getProgramId() != null && !student.getProgramId().equals(course.getProgramId())) {
+            throw new BusinessRuleException("Cannot enroll in a course outside your academic program");
+        }
+
+        String termId = student.getCurrentTermId();
+        if (termId == null || termId.isBlank()) {
+            termId = "term_2026_2";
+        }
+
+        Optional<CourseEnrollment> existing = courseEnrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId);
+        CourseEnrollment enrollment;
+        if (existing.isPresent()) {
+            enrollment = existing.get();
+            if ("ENROLLED".equalsIgnoreCase(enrollment.getStatus())) {
+                throw new BusinessRuleException("Student is already enrolled in course " + course.getCode());
+            }
+            enrollment.setStatus("ENROLLED");
+            enrollment.setEnrollmentDate(LocalDate.now());
+            enrollment = courseEnrollmentRepository.save(enrollment);
+        } else {
+            enrollment = CourseEnrollment.builder()
+                    .id("enr_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16))
+                    .studentId(student.getId())
+                    .courseId(course.getId())
+                    .academicTermId(termId)
+                    .enrollmentDate(LocalDate.now())
+                    .status("ENROLLED")
+                    .build();
+            enrollment = courseEnrollmentRepository.save(enrollment);
+        }
+
+        auditService.recordEvent(
+                institutionId,
+                currentUserId,
+                student.getAdmissionNumber(),
+                "COURSE_ENROLL",
+                "COURSE_ENROLLMENT",
+                enrollment.getId(),
+                "SUCCESS",
+                null, null, null,
+                "Enrolled in course " + course.getCode() + " (" + course.getName() + ")",
+                null, null
+        );
+
+        StudentEnrolledCourseDto dto = StudentEnrolledCourseDto.builder()
+                .id(course.getId())
+                .enrollmentId(enrollment.getId())
+                .courseId(course.getId())
+                .code(course.getCode())
+                .name(course.getName())
+                .creditHours(course.getCreditHours())
+                .semester(course.getSemester())
+                .academicTermId(enrollment.getAcademicTermId())
+                .status(enrollment.getStatus())
+                .enrollmentDate(enrollment.getEnrollmentDate())
+                .build();
+
+        return ApiResponse.success("Successfully enrolled in " + course.getCode(), dto);
+    }
+
+    @DeleteMapping("/me/courses/{courseId}/enroll")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Drop a course enrollment for currently authenticated student")
+    public ApiResponse<Void> dropCourse(@PathVariable String courseId) {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
+
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
+
+        CourseEnrollment enrollment = courseEnrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("No active enrollment found for course: " + courseId));
+
+        enrollment.setStatus("DROPPED");
+        courseEnrollmentRepository.save(enrollment);
+
+        auditService.recordEvent(
+                institutionId,
+                currentUserId,
+                student.getAdmissionNumber(),
+                "COURSE_DROP",
+                "COURSE_ENROLLMENT",
+                enrollment.getId(),
+                "SUCCESS",
+                null, null, null,
+                "Dropped course " + courseId,
+                null, null
+        );
+
+        return ApiResponse.success("Course enrollment dropped successfully", null);
     }
 
     @GetMapping("/me/fees")
