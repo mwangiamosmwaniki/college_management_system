@@ -2,11 +2,19 @@ package ke.college.management.students;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import ke.college.management.academics.entity.Course;
+import ke.college.management.academics.entity.StudentMark;
+import ke.college.management.academics.repository.CourseRepository;
+import ke.college.management.academics.repository.StudentMarkRepository;
 import ke.college.management.audit.AuditService;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.common.PageResponse;
 import ke.college.management.exceptions.ResourceNotFoundException;
 import ke.college.management.exceptions.UnauthorizedException;
+import ke.college.management.finance.entity.Invoice;
+import ke.college.management.finance.entity.Payment;
+import ke.college.management.finance.repository.InvoiceRepository;
+import ke.college.management.finance.repository.PaymentRepository;
 import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.SecurityUtils;
 import ke.college.management.students.entity.Student;
@@ -26,6 +34,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -35,6 +46,10 @@ import java.util.UUID;
 public class StudentController {
 
     private final StudentRepository studentRepository;
+    private final CourseRepository courseRepository;
+    private final InvoiceRepository invoiceRepository;
+    private final PaymentRepository paymentRepository;
+    private final StudentMarkRepository studentMarkRepository;
     private final AuditService auditService;
 
     @GetMapping
@@ -65,6 +80,56 @@ public class StudentController {
                 .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
 
         return ApiResponse.success(student);
+    }
+
+    @GetMapping("/me/courses")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get enrolled courses for current logged-in student")
+    public ApiResponse<List<Course>> getMyCourses() {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
+
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
+
+        List<Course> courses = courseRepository.findByProgramId(student.getProgramId());
+        return ApiResponse.success(courses);
+    }
+
+    @GetMapping("/me/fees")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get fee statement, balance and payment history for current logged-in student")
+    public ApiResponse<Map<String, Object>> getMyFees() {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
+
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
+
+        List<Invoice> invoices = invoiceRepository.findByStudentId(student.getId());
+        List<Payment> payments = paymentRepository.findByStudentId(student.getId());
+
+        Map<String, Object> feeData = new HashMap<>();
+        feeData.put("feeBalance", student.getFeeBalance());
+        feeData.put("invoices", invoices);
+        feeData.put("payments", payments);
+        feeData.put("admissionNumber", student.getAdmissionNumber());
+        feeData.put("studentName", student.getFullName());
+
+        return ApiResponse.success(feeData);
+    }
+
+    @GetMapping("/me/results")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get academic exam results for current logged-in student")
+    public ApiResponse<List<StudentMark>> getMyResults() {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
+
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
+
+        return ApiResponse.success(studentMarkRepository.findByStudentId(student.getId()));
     }
 
     @GetMapping("/{id}")

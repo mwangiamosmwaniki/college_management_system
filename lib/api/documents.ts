@@ -36,6 +36,10 @@ export const documentsApi = {
     return apiClient<DocumentRecordDto[]>(`/api/v1/documents/student/${studentId}`);
   },
 
+  getMyDocuments: async (): Promise<ApiResponse<DocumentRecordDto[]>> => {
+    return apiClient<DocumentRecordDto[]>('/api/v1/documents/student/me');
+  },
+
   getPresignedUrl: async (documentId: string, expireMinutes = 15): Promise<ApiResponse<{ downloadUrl: string; expiresInMinutes: number }>> => {
     return apiClient<{ downloadUrl: string; expiresInMinutes: number }>(`/api/v1/documents/${documentId}/presigned-url?expireMinutes=${expireMinutes}`);
   },

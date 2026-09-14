@@ -7,7 +7,11 @@ import ke.college.management.common.ApiResponse;
 import ke.college.management.documents.entity.DocumentRecord;
 import ke.college.management.documents.repository.DocumentRepository;
 import ke.college.management.exceptions.ResourceNotFoundException;
+import ke.college.management.exceptions.UnauthorizedException;
+import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.SecurityUtils;
+import ke.college.management.students.entity.Student;
+import ke.college.management.students.repository.StudentRepository;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +41,7 @@ public class DocumentController {
 
     private final DocumentRepository documentRepository;
     private final DocumentStorageService storageService;
+    private final StudentRepository studentRepository;
     private final AuditService auditService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -59,10 +64,37 @@ public class DocumentController {
         return ApiResponse.success(storageService.getInstitutionDocuments());
     }
 
+    @GetMapping("/student/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get all documents associated with currently authenticated student")
+    public ApiResponse<List<DocumentRecord>> getMyDocuments() {
+        String userId = SecurityUtils.getCurrentUserId();
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
+        return ApiResponse.success(storageService.getStudentDocuments(student.getId()));
+    }
+
     @GetMapping("/student/{studentId}")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get all documents associated with a student")
     public ApiResponse<List<DocumentRecord>> getStudentDocuments(@PathVariable String studentId) {
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaff = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
+                               a.getAuthority().startsWith("ROLE_LECTURER") ||
+                               a.getAuthority().startsWith("ROLE_FINANCE") ||
+                               a.getAuthority().startsWith("ROLE_REGISTRAR") ||
+                               a.getAuthority().startsWith("ROLE_DEAN"));
+
+        if (!isStaff) {
+            Student student = studentRepository.findByInstitutionIdAndUserId(
+                    SecurityUtils.getCurrentInstitutionId(), currentUser.getId()
+            ).orElseThrow(() -> new UnauthorizedException("Student profile required"));
+            if (!student.getId().equals(studentId)) {
+                throw new UnauthorizedException("IDOR Violation: Access denied to other student documents");
+            }
+        }
         return ApiResponse.success(storageService.getStudentDocuments(studentId));
     }
 
@@ -73,6 +105,27 @@ public class DocumentController {
             @PathVariable String id,
             @RequestParam(defaultValue = "15") int expireMinutes
     ) {
+        DocumentRecord doc = documentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
+        SecurityUtils.validateTenantAccess(doc.getInstitutionId());
+
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaff = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
+                               a.getAuthority().startsWith("ROLE_LECTURER") ||
+                               a.getAuthority().startsWith("ROLE_FINANCE") ||
+                               a.getAuthority().startsWith("ROLE_REGISTRAR") ||
+                               a.getAuthority().startsWith("ROLE_DEAN"));
+
+        if (!isStaff && doc.getStudentId() != null) {
+            Student student = studentRepository.findByInstitutionIdAndUserId(
+                    SecurityUtils.getCurrentInstitutionId(), currentUser.getId()
+            ).orElseThrow(() -> new UnauthorizedException("Student profile required"));
+            if (!doc.getStudentId().equals(student.getId())) {
+                throw new UnauthorizedException("IDOR Violation: Access denied to document");
+            }
+        }
+
         String url = storageService.generatePresignedUrl(id, Duration.ofMinutes(expireMinutes));
         return ApiResponse.success(Map.of(
                 "downloadUrl", url,
@@ -87,6 +140,23 @@ public class DocumentController {
         DocumentRecord doc = documentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Document not found"));
         SecurityUtils.validateTenantAccess(doc.getInstitutionId());
+
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaff = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
+                               a.getAuthority().startsWith("ROLE_LECTURER") ||
+                               a.getAuthority().startsWith("ROLE_FINANCE") ||
+                               a.getAuthority().startsWith("ROLE_REGISTRAR") ||
+                               a.getAuthority().startsWith("ROLE_DEAN"));
+
+        if (!isStaff && doc.getStudentId() != null) {
+            Student student = studentRepository.findByInstitutionIdAndUserId(
+                    SecurityUtils.getCurrentInstitutionId(), currentUser.getId()
+            ).orElseThrow(() -> new UnauthorizedException("Student profile required"));
+            if (!doc.getStudentId().equals(student.getId())) {
+                throw new UnauthorizedException("IDOR Violation: Access denied to document");
+            }
+        }
 
         byte[] bytes = storageService.downloadDocumentBytes(id);
         String filename = doc.getTitle() != null ? doc.getTitle().replaceAll("[^a-zA-Z0-9._-]", "_") : "document";

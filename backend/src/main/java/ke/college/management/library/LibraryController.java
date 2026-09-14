@@ -11,6 +11,8 @@ import ke.college.management.library.entity.Book;
 import ke.college.management.library.entity.BorrowRecord;
 import ke.college.management.library.repository.BookRepository;
 import ke.college.management.library.repository.BorrowRecordRepository;
+import ke.college.management.exceptions.UnauthorizedException;
+import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.SecurityUtils;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -133,9 +135,26 @@ public class LibraryController {
         return ApiResponse.success("Book returned. Overdue fine: KES " + saved.getFineAmount(), saved);
     }
 
+    @GetMapping("/records/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get borrowing history for the currently authenticated user")
+    public ApiResponse<List<BorrowRecord>> getMyRecords() {
+        return ApiResponse.success(borrowRecordRepository.findByUserId(SecurityUtils.getCurrentUserId()));
+    }
+
     @GetMapping("/records/user/{userId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get user borrowing history")
     public ApiResponse<List<BorrowRecord>> getUserRecords(@PathVariable String userId) {
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaffOrLibrarian = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") ||
+                               a.getAuthority().equals("LIBRARY_MANAGE") ||
+                               a.getAuthority().equals("ROLE_LIBRARIAN"));
+
+        if (!isStaffOrLibrarian && !currentUser.getId().equals(userId)) {
+            throw new UnauthorizedException("IDOR Violation: Access denied to other user borrowing records");
+        }
         return ApiResponse.success(borrowRecordRepository.findByUserId(userId));
     }
 

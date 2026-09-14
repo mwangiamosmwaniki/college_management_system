@@ -73,6 +73,8 @@ public class ProcurementController {
         ProcurementRequisition req = requisitionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Requisition not found"));
 
+        SecurityUtils.validateTenantAccess(req.getInstitutionId());
+
         req.setStatus(status.toUpperCase());
         req.setApprovedBy(SecurityUtils.getCurrentUserId());
         ProcurementRequisition saved = requisitionRepository.save(req);

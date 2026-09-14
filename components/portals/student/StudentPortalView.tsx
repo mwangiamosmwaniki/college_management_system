@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useERP } from '@/context/erp-context';
 import { StudentRequest, AcademicCourse } from '@/types/erp';
-import { MOCK_REGISTRATION_COURSES_POOL } from '@/lib/mock-data';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { DataTable, Column } from '@/components/ui/DataTable';
@@ -58,10 +57,16 @@ export function StudentPortalView() {
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
 
   // State for Academic Registration
-  const [registeredCoursesList, setRegisteredCoursesList] = useState<AcademicCourse[]>(MOCK_REGISTRATION_COURSES_POOL);
+  const [registeredCoursesList, setRegisteredCoursesList] = useState<AcademicCourse[]>(studentCourses || []);
   const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
   const [regSearch, setRegSearch] = useState('');
   const [regCategoryFilter, setRegCategoryFilter] = useState('ALL');
+
+  useEffect(() => {
+    if (studentCourses && studentCourses.length > 0) {
+      setRegisteredCoursesList(studentCourses);
+    }
+  }, [studentCourses]);
 
   // Filter state for timetable
   const [selectedDay, setSelectedDay] = useState<string>('ALL');

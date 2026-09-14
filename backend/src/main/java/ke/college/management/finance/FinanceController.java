@@ -95,11 +95,33 @@ public class FinanceController {
         return ApiResponse.success("Invoice cancelled and fee charges reversed", invoice);
     }
 
+    @GetMapping("/invoices/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get fee invoices for currently authenticated student")
+    public ApiResponse<List<Invoice>> getMyInvoices() {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
+        return ApiResponse.success(invoiceRepository.findByStudentId(student.getId()));
+    }
+
     @GetMapping("/invoices/student/{studentId}")
     @Operation(summary = "Get fee invoices for student")
     public ApiResponse<List<Invoice>> getStudentInvoices(@PathVariable String studentId) {
         validateStudentAccess(studentId);
         return ApiResponse.success(invoiceRepository.findByStudentId(studentId));
+    }
+
+    @GetMapping("/payments/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get payment history for currently authenticated student")
+    public ApiResponse<List<Payment>> getMyPayments() {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
+        return ApiResponse.success(paymentRepository.findByStudentId(student.getId()));
     }
 
     @GetMapping("/payments/student/{studentId}")

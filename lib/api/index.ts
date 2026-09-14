@@ -12,3 +12,5 @@ export * from './library';
 export * from './hr';
 export * from './procurement';
 export * from './lms';
+export * from './notifications';
+export * from './lecturers';

@@ -5,11 +5,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import ke.college.management.audit.AuditService;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.exceptions.ResourceNotFoundException;
+import ke.college.management.exceptions.UnauthorizedException;
 import ke.college.management.hostel.entity.Hostel;
 import ke.college.management.hostel.entity.HostelAllocation;
 import ke.college.management.hostel.repository.HostelAllocationRepository;
 import ke.college.management.hostel.repository.HostelRepository;
+import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.SecurityUtils;
+import ke.college.management.students.entity.Student;
+import ke.college.management.students.repository.StudentRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,6 +37,7 @@ public class HostelController {
 
     private final HostelRepository hostelRepository;
     private final HostelAllocationRepository hostelAllocationRepository;
+    private final StudentRepository studentRepository;
     private final AuditService auditService;
 
     @GetMapping
@@ -88,9 +93,35 @@ public class HostelController {
         return ApiResponse.success("Student checked out from accommodation", saved);
     }
 
+    @GetMapping("/allocations/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get accommodation allocations for currently authenticated student")
+    public ApiResponse<List<HostelAllocation>> getMyAllocations() {
+        String userId = SecurityUtils.getCurrentUserId();
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found for user"));
+        return ApiResponse.success(hostelAllocationRepository.findByStudentId(student.getId()));
+    }
+
     @GetMapping("/allocations/student/{studentId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get accommodation allocations for student")
     public ApiResponse<List<HostelAllocation>> getStudentAllocations(@PathVariable String studentId) {
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaff = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") ||
+                               a.getAuthority().equals("HOSTEL_MANAGE") ||
+                               a.getAuthority().equals("ROLE_WARDEN"));
+
+        if (!isStaff) {
+            Student student = studentRepository.findByInstitutionIdAndUserId(
+                    SecurityUtils.getCurrentInstitutionId(), currentUser.getId()
+            ).orElseThrow(() -> new UnauthorizedException("Student profile required"));
+            if (!student.getId().equals(studentId)) {
+                throw new UnauthorizedException("IDOR Violation: Access denied to other student hostel allocations");
+            }
+        }
         return ApiResponse.success(hostelAllocationRepository.findByStudentId(studentId));
     }
 

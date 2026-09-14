@@ -49,4 +49,8 @@ export const hostelsApi = {
   getStudentAllocations: async (studentId: string): Promise<ApiResponse<HostelAllocationEntity[]>> => {
     return apiClient<HostelAllocationEntity[]>(`/api/v1/hostels/allocations/student/${studentId}`);
   },
+
+  getMyAllocations: async (): Promise<ApiResponse<HostelAllocationEntity[]>> => {
+    return apiClient<HostelAllocationEntity[]>('/api/v1/hostels/allocations/me');
+  },
 };

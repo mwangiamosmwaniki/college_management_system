@@ -19,7 +19,6 @@ const FORWARD_HEADERS = new Set([
   'accept',
   'cookie',
   'authorization',
-  'x-tenant-id',
   'x-forwarded-for',
   'x-forwarded-proto',
   'x-request-id'

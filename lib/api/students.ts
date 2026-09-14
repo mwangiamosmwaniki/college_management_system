@@ -49,4 +49,20 @@ export const studentsApi = {
       body: JSON.stringify(update),
     });
   },
+
+  getMyProfile: async (): Promise<ApiResponse<StudentEntity>> => {
+    return apiClient<StudentEntity>('/api/v1/students/me');
+  },
+
+  getMyCourses: async (): Promise<ApiResponse<any[]>> => {
+    return apiClient<any[]>('/api/v1/students/me/courses');
+  },
+
+  getMyFees: async (): Promise<ApiResponse<any>> => {
+    return apiClient<any>('/api/v1/students/me/fees');
+  },
+
+  getMyResults: async (): Promise<ApiResponse<any[]>> => {
+    return apiClient<any[]>('/api/v1/students/me/results');
+  },
 };

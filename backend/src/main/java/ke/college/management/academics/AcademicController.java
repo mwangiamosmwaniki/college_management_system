@@ -10,7 +10,11 @@ import ke.college.management.audit.AuditService;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.exceptions.BadRequestException;
 import ke.college.management.exceptions.ResourceNotFoundException;
+import ke.college.management.exceptions.UnauthorizedException;
+import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.SecurityUtils;
+import ke.college.management.students.entity.Student;
+import ke.college.management.students.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +40,7 @@ public class AcademicController {
 
     private final AssessmentRepository assessmentRepository;
     private final StudentMarkRepository studentMarkRepository;
+    private final StudentRepository studentRepository;
     private final AuditService auditService;
 
     @GetMapping("/assessments")
@@ -54,10 +59,37 @@ public class AcademicController {
         return ApiResponse.success("Assessment created successfully", saved);
     }
 
+    @GetMapping("/marks/me")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get official marks for currently authenticated student")
+    public ApiResponse<List<StudentMark>> getMyMarks() {
+        String userId = SecurityUtils.getCurrentUserId();
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
+        return ApiResponse.success(studentMarkRepository.findByStudentId(student.getId()));
+    }
+
     @GetMapping("/marks/student/{studentId}")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get official marks for a student")
     public ApiResponse<List<StudentMark>> getStudentMarks(@PathVariable String studentId) {
-        // Enforce IDOR protection: only student self or authorized staff
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaffOrLecturer = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") ||
+                               a.getAuthority().equals("ROLE_LECTURER") ||
+                               a.getAuthority().equals("ROLE_REGISTRAR") ||
+                               a.getAuthority().equals("MARK_ENTER") ||
+                               a.getAuthority().equals("STUDENT_VIEW"));
+
+        if (!isStaffOrLecturer) {
+            Student student = studentRepository.findByInstitutionIdAndUserId(
+                    SecurityUtils.getCurrentInstitutionId(), currentUser.getId()
+            ).orElseThrow(() -> new UnauthorizedException("Student profile required"));
+            if (!student.getId().equals(studentId)) {
+                throw new UnauthorizedException("IDOR Violation: Access denied to other student marks");
+            }
+        }
         return ApiResponse.success(studentMarkRepository.findByStudentId(studentId));
     }
 

@@ -87,6 +87,8 @@ public class HrController {
         LeaveRequest leave = leaveRequestRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Leave request not found"));
 
+        SecurityUtils.validateTenantAccess(leave.getInstitutionId());
+
         leave.setStatus(status.toUpperCase());
         leave.setReviewedBy(SecurityUtils.getCurrentUserId());
         LeaveRequest saved = leaveRequestRepository.save(leave);

@@ -6,11 +6,15 @@ import ke.college.management.audit.AuditService;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.exceptions.BadRequestException;
 import ke.college.management.exceptions.ResourceNotFoundException;
+import ke.college.management.exceptions.UnauthorizedException;
 import ke.college.management.lms.entity.LmsAssignment;
 import ke.college.management.lms.entity.LmsSubmission;
 import ke.college.management.lms.repository.LmsAssignmentRepository;
 import ke.college.management.lms.repository.LmsSubmissionRepository;
+import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.SecurityUtils;
+import ke.college.management.students.entity.Student;
+import ke.college.management.students.repository.StudentRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,6 +38,7 @@ public class LmsController {
 
     private final LmsAssignmentRepository assignmentRepository;
     private final LmsSubmissionRepository submissionRepository;
+    private final StudentRepository studentRepository;
     private final AuditService auditService;
 
     @GetMapping("/assignments/course/{courseId}")
@@ -52,7 +57,22 @@ public class LmsController {
         return ApiResponse.success("Assignment created successfully", saved);
     }
 
+    @GetMapping("/assignments/{assignmentId}/my-submission")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get current student submission for assignment")
+    public ApiResponse<LmsSubmission> getMySubmission(@PathVariable String assignmentId) {
+        String userId = SecurityUtils.getCurrentUserId();
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
+
+        LmsSubmission submission = submissionRepository.findByAssignmentIdAndStudentId(assignmentId, student.getId())
+                .orElse(null);
+        return ApiResponse.success(submission);
+    }
+
     @PostMapping("/assignments/{assignmentId}/submit")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Submit assignment response")
     public ApiResponse<LmsSubmission> submitAssignment(
             @PathVariable String assignmentId,
@@ -61,13 +81,27 @@ public class LmsController {
         LmsAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
 
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        String targetStudentId = request.getStudentId();
+
+        // Enforce that a student can only submit for themselves
+        boolean isStaff = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_LECTURER"));
+
+        if (!isStaff) {
+            Student student = studentRepository.findByInstitutionIdAndUserId(
+                    SecurityUtils.getCurrentInstitutionId(), currentUser.getId()
+            ).orElseThrow(() -> new UnauthorizedException("Student profile required for assignment submission"));
+            targetStudentId = student.getId();
+        }
+
         boolean isLate = Instant.now().isAfter(assignment.getDueDate());
 
-        LmsSubmission submission = submissionRepository.findByAssignmentIdAndStudentId(assignmentId, request.getStudentId())
+        LmsSubmission submission = submissionRepository.findByAssignmentIdAndStudentId(assignmentId, targetStudentId)
                 .orElse(LmsSubmission.builder()
                         .id("sub_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16))
                         .assignmentId(assignmentId)
-                        .studentId(request.getStudentId())
+                        .studentId(targetStudentId)
                         .build());
 
         submission.setSubmissionText(request.getSubmissionText());

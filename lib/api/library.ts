@@ -55,4 +55,8 @@ export const libraryApi = {
   getUserRecords: async (userId: string): Promise<ApiResponse<BorrowRecordEntity[]>> => {
     return apiClient<BorrowRecordEntity[]>(`/api/v1/library/records/user/${userId}`);
   },
+
+  getMyRecords: async (): Promise<ApiResponse<BorrowRecordEntity[]>> => {
+    return apiClient<BorrowRecordEntity[]>('/api/v1/library/records/me');
+  },
 };
