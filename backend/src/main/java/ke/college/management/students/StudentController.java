@@ -28,6 +28,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -134,6 +135,7 @@ public class StudentController {
 
     @PostMapping("/me/courses/{courseId}/enroll")
     @PreAuthorize("isAuthenticated()")
+    @Transactional
     @Operation(summary = "Authoritatively enroll currently authenticated student into a course")
     public ApiResponse<StudentEnrolledCourseDto> enrollInCourse(@PathVariable String courseId) {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
@@ -155,12 +157,13 @@ public class StudentController {
             termId = "term_2026_2";
         }
 
-        Optional<CourseEnrollment> existing = courseEnrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId);
+        // Authoritative term-aware unique enrollment identity: studentId + courseId + academicTermId
+        Optional<CourseEnrollment> existing = courseEnrollmentRepository.findByStudentIdAndCourseIdAndAcademicTermId(student.getId(), courseId, termId);
         CourseEnrollment enrollment;
         if (existing.isPresent()) {
             enrollment = existing.get();
             if ("ENROLLED".equalsIgnoreCase(enrollment.getStatus())) {
-                throw new BusinessRuleException("Student is already enrolled in course " + course.getCode());
+                throw new BusinessRuleException("Student is already enrolled in course " + course.getCode() + " for term " + termId);
             }
             enrollment.setStatus("ENROLLED");
             enrollment.setEnrollmentDate(LocalDate.now());
@@ -186,7 +189,7 @@ public class StudentController {
                 enrollment.getId(),
                 "SUCCESS",
                 null, null, null,
-                "Enrolled in course " + course.getCode() + " (" + course.getName() + ")",
+                "Enrolled in course " + course.getCode() + " (" + course.getName() + ") for term " + termId,
                 null, null
         );
 
@@ -208,6 +211,7 @@ public class StudentController {
 
     @DeleteMapping("/me/courses/{courseId}/enroll")
     @PreAuthorize("isAuthenticated()")
+    @Transactional
     @Operation(summary = "Drop a course enrollment for currently authenticated student")
     public ApiResponse<Void> dropCourse(@PathVariable String courseId) {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
@@ -216,8 +220,16 @@ public class StudentController {
         Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
 
-        CourseEnrollment enrollment = courseEnrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId)
-                .orElseThrow(() -> new ResourceNotFoundException("No active enrollment found for course: " + courseId));
+        String termId = student.getCurrentTermId();
+        if (termId == null || termId.isBlank()) {
+            termId = "term_2026_2";
+        }
+
+        // Locate active enrollment for current academic term, falling back to any active enrollment for the course
+        CourseEnrollment enrollment = courseEnrollmentRepository
+                .findByStudentIdAndCourseIdAndAcademicTermId(student.getId(), courseId, termId)
+                .orElseGet(() -> courseEnrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId)
+                        .orElseThrow(() -> new ResourceNotFoundException("No active enrollment found for course: " + courseId)));
 
         enrollment.setStatus("DROPPED");
         courseEnrollmentRepository.save(enrollment);
@@ -231,7 +243,7 @@ public class StudentController {
                 enrollment.getId(),
                 "SUCCESS",
                 null, null, null,
-                "Dropped course " + courseId,
+                "Dropped course " + courseId + " for term " + termId,
                 null, null
         );
 
@@ -280,8 +292,12 @@ public class StudentController {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
         CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
 
-        Student student = studentRepository.findByInstitutionIdAndId(institutionId, id)
+        Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student record not found"));
+
+        if (!institutionId.equals(student.getInstitutionId())) {
+            throw new UnauthorizedException("Cross-tenant access denied to student record " + id);
+        }
 
         // IDOR Protection: If student role, ensure caller owns this student record
         boolean isStaff = currentUser.getAuthorities().stream()

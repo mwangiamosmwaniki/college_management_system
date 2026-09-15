@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.common.PageResponse;
+import ke.college.management.exceptions.BadRequestException;
 import ke.college.management.exceptions.ResourceNotFoundException;
 import ke.college.management.exceptions.UnauthorizedException;
 import ke.college.management.finance.dto.CreateInvoiceRequest;
@@ -51,16 +52,28 @@ public class FinanceController {
     private final FinanceReconciliationService reconciliationService;
 
     private void validateStudentAccess(String studentId) {
+        if (studentId == null || studentId.isBlank()) {
+            throw new BadRequestException("studentId is required");
+        }
+
+        String currentInstitutionId = SecurityUtils.getCurrentInstitutionId();
+        Student targetStudent = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
+
+        if (!currentInstitutionId.equals(targetStudent.getInstitutionId())) {
+            throw new UnauthorizedException("Cross-tenant access denied: Student belongs to a different institution");
+        }
+
         CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
         boolean isStaff = currentUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
                                a.getAuthority().startsWith("ROLE_FINANCE") ||
                                a.getAuthority().startsWith("ROLE_DEAN"));
         if (!isStaff) {
-            Student student = studentRepository.findByInstitutionIdAndUserId(
-                    SecurityUtils.getCurrentInstitutionId(), currentUser.getId()
+            Student callerStudent = studentRepository.findByInstitutionIdAndUserId(
+                    currentInstitutionId, currentUser.getId()
             ).orElseThrow(() -> new UnauthorizedException("IDOR Violation: Student profile not found for account"));
-            if (!student.getId().equals(studentId)) {
+            if (!callerStudent.getId().equals(studentId)) {
                 throw new UnauthorizedException("IDOR Violation: Access denied to student finance records");
             }
         }
@@ -178,9 +191,45 @@ public class FinanceController {
     @PostMapping("/payments/mpesa/stk-push")
     @Operation(summary = "Initiate real M-Pesa STK Push payment")
     public ApiResponse<MpesaTransaction> initiateMpesaPayment(@RequestBody MpesaInitiateRequest request) {
-        validateStudentAccess(request.getStudentId());
+        String currentInstitutionId = SecurityUtils.getCurrentInstitutionId();
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaff = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
+                               a.getAuthority().startsWith("ROLE_FINANCE") ||
+                               a.getAuthority().startsWith("ROLE_DEAN"));
+
+        String effectiveStudentId = request.getStudentId();
+        if (!isStaff) {
+            // For students, authoritatively resolve from identity and disallow tampering
+            Student callerStudent = studentRepository.findByInstitutionIdAndUserId(
+                    currentInstitutionId, currentUser.getId()
+            ).orElseThrow(() -> new UnauthorizedException("Student profile not found for account"));
+            if (effectiveStudentId != null && !effectiveStudentId.isBlank() && !callerStudent.getId().equals(effectiveStudentId)) {
+                throw new UnauthorizedException("IDOR Violation: Students cannot initiate payments for other student accounts");
+            }
+            effectiveStudentId = callerStudent.getId();
+            request.setStudentId(effectiveStudentId);
+        } else {
+            if (effectiveStudentId == null || effectiveStudentId.isBlank()) {
+                throw new BadRequestException("studentId is required for staff payment initiation");
+            }
+            validateStudentAccess(effectiveStudentId);
+        }
+
+        // Validate invoice tenant and student ownership if invoiceId is supplied
+        if (request.getInvoiceId() != null && !request.getInvoiceId().isBlank()) {
+            Invoice invoice = invoiceRepository.findById(request.getInvoiceId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + request.getInvoiceId()));
+            if (!currentInstitutionId.equals(invoice.getInstitutionId())) {
+                throw new UnauthorizedException("Cross-tenant access denied to invoice");
+            }
+            if (!invoice.getStudentId().equals(effectiveStudentId)) {
+                throw new UnauthorizedException("IDOR Violation: Specified invoice does not belong to the target student");
+            }
+        }
+
         MpesaTransaction tx = paymentService.initiateMpesaStkPush(
-                request.getStudentId(),
+                effectiveStudentId,
                 request.getInvoiceId(),
                 request.getPhoneNumber(),
                 request.getAmount(),
