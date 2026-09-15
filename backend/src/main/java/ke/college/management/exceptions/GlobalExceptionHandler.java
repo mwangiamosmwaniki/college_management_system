@@ -3,6 +3,7 @@ package ke.college.management.exceptions;
 import ke.college.management.common.ApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -84,6 +85,14 @@ public class GlobalExceptionHandler {
         String requestId = UUID.randomUUID().toString();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ex.getMessage(), null, requestId));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        String requestId = UUID.randomUUID().toString();
+        log.warn("Data integrity constraint violation [{}]: {}", requestId, ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("Data conflict: The requested operation violates unique or integrity constraints.", null, requestId));
     }
 
     @ExceptionHandler(Exception.class)

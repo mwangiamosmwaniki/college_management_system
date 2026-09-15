@@ -294,7 +294,7 @@ export function createAuditLog(
     action,
     resource,
     status,
-    ipAddress: metadata?.ipAddress || '127.0.0.1 (Reverse Proxy Authenticated)',
+    ipAddress: metadata?.ipAddress || '-',
     details,
     actorId: metadata?.actorId || (user.impersonatedBy ? user.impersonatedBy : user.id),
     sessionId: metadata?.sessionId || 'sess_portal',

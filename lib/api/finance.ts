@@ -30,11 +30,13 @@ export interface PaymentEntity {
 
 export interface MpesaTransactionDto {
   id: string;
-  merchantRequestId: string;
-  checkoutRequestId: string;
   phoneNumber: string;
   amount: number;
   status: string;
+  merchantRequestId?: string;
+  checkoutRequestId?: string;
+  transactionCode?: string;
+  mpesaReceiptNumber?: string;
 }
 
 export const financeApi = {

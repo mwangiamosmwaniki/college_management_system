@@ -6,6 +6,8 @@ import ke.college.management.academics.repository.CourseEnrollmentRepository;
 import ke.college.management.academics.repository.CourseRepository;
 import ke.college.management.finance.entity.Invoice;
 import ke.college.management.finance.repository.InvoiceRepository;
+import ke.college.management.academics.entity.AcademicTerm;
+import ke.college.management.academics.repository.AcademicTermRepository;
 import ke.college.management.institutions.entity.Institution;
 import ke.college.management.institutions.repository.InstitutionRepository;
 import ke.college.management.security.CustomUserDetails;
@@ -34,6 +36,7 @@ public class TestEnvironmentFixture {
     private final CourseRepository courseRepository;
     private final CourseEnrollmentRepository courseEnrollmentRepository;
     private final InvoiceRepository invoiceRepository;
+    private final AcademicTermRepository academicTermRepository;
 
     public static final String TENANT_PRIMARY = "inst_apex_tvet";
     public static final String TENANT_FOREIGN = "inst_foreign_poly";
@@ -83,6 +86,20 @@ public class TestEnvironmentFixture {
                     .isActive(true)
                     .createdAt(Instant.now())
                     .updatedAt(Instant.now())
+                    .build());
+        }
+
+        if (academicTermRepository.findFirstByInstitutionIdAndIsActiveTrue(TENANT_PRIMARY).isEmpty()) {
+            academicTermRepository.save(AcademicTerm.builder()
+                    .id("term_2026_2")
+                    .institutionId(TENANT_PRIMARY)
+                    .academicYearId("ay_2025_2026")
+                    .termName("Term 2 (Jan - Apr 2026)")
+                    .startDate(LocalDate.of(2026, 1, 5))
+                    .endDate(LocalDate.of(2026, 4, 10))
+                    .status("ACTIVE")
+                    .isActive(true)
+                    .createdAt(Instant.now())
                     .build());
         }
     }

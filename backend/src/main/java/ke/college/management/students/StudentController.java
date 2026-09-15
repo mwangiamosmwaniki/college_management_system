@@ -3,12 +3,14 @@ package ke.college.management.students;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ke.college.management.academics.dto.StudentEnrolledCourseDto;
+import ke.college.management.academics.entity.AcademicTerm;
 import ke.college.management.academics.entity.Course;
 import ke.college.management.academics.entity.CourseEnrollment;
 import ke.college.management.academics.entity.StudentMark;
 import ke.college.management.academics.repository.CourseEnrollmentRepository;
 import ke.college.management.academics.repository.CourseRepository;
 import ke.college.management.academics.repository.StudentMarkRepository;
+import ke.college.management.academics.service.AcademicTermService;
 import ke.college.management.audit.AuditService;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.common.PageResponse;
@@ -21,9 +23,11 @@ import ke.college.management.finance.repository.InvoiceRepository;
 import ke.college.management.finance.repository.PaymentRepository;
 import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.SecurityUtils;
+import ke.college.management.students.dto.StudentResponseDto;
 import ke.college.management.students.entity.Student;
 import ke.college.management.students.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -61,11 +65,33 @@ public class StudentController {
     private final PaymentRepository paymentRepository;
     private final StudentMarkRepository studentMarkRepository;
     private final AuditService auditService;
+    private final AcademicTermService academicTermService;
+
+    private StudentResponseDto toDto(Student student) {
+        if (student == null) return null;
+        return StudentResponseDto.builder()
+                .id(student.getId())
+                .admissionNumber(student.getAdmissionNumber())
+                .fullName(student.getFullName())
+                .campusId(student.getCampusId())
+                .programId(student.getProgramId())
+                .currentTermId(student.getCurrentTermId())
+                .gender(student.getGender())
+                .birthDate(student.getBirthDate())
+                .phoneNumber(student.getPhoneNumber())
+                .email(student.getEmail())
+                .guardianName(student.getGuardianName())
+                .guardianPhone(student.getGuardianPhone())
+                .status(student.getStatus())
+                .feeBalance(student.getFeeBalance())
+                .createdAt(student.getCreatedAt())
+                .build();
+    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('STUDENT_VIEW') or hasRole('ADMIN') or hasRole('LECTURER') or hasRole('FINANCE')")
     @Operation(summary = "Paginated student list with search and tenant isolation")
-    public ApiResponse<PageResponse<Student>> getStudents(
+    public ApiResponse<PageResponse<StudentResponseDto>> getStudents(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String search
@@ -77,19 +103,20 @@ public class StudentController {
                 ? studentRepository.searchStudents(institutionId, search.trim(), pageable)
                 : studentRepository.findByInstitutionId(institutionId, pageable);
 
-        return ApiResponse.success(PageResponse.from(studentPage));
+        Page<StudentResponseDto> dtoPage = studentPage.map(this::toDto);
+        return ApiResponse.success(PageResponse.from(dtoPage));
     }
 
     @GetMapping("/me")
     @Operation(summary = "Get current logged-in student profile")
-    public ApiResponse<Student> getMyStudentProfile() {
+    public ApiResponse<StudentResponseDto> getMyStudentProfile() {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
         String currentUserId = SecurityUtils.getCurrentUserId();
 
         Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
 
-        return ApiResponse.success(student);
+        return ApiResponse.success(toDto(student));
     }
 
     @GetMapping("/me/courses")
@@ -102,7 +129,16 @@ public class StudentController {
         Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
 
-        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByStudentIdAndStatus(student.getId(), "ENROLLED");
+        String termId = student.getCurrentTermId();
+        if (termId == null || termId.isBlank()) {
+            Optional<AcademicTerm> activeTerm = academicTermService.findCurrentActiveTerm(institutionId);
+            termId = activeTerm.map(AcademicTerm::getId).orElse(null);
+        }
+
+        List<CourseEnrollment> enrollments = (termId != null)
+                ? courseEnrollmentRepository.findByStudentIdAndAcademicTermIdAndStatus(student.getId(), termId, "ENROLLED")
+                : courseEnrollmentRepository.findByStudentIdAndStatus(student.getId(), "ENROLLED");
+
         if (enrollments.isEmpty()) {
             return ApiResponse.success(List.of());
         }
@@ -148,13 +184,15 @@ public class StudentController {
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found: " + courseId));
 
         // Validate that course belongs to student's program
-        if (student.getProgramId() != null && !student.getProgramId().equals(course.getProgramId())) {
+        if (student.getProgramId() == null || !student.getProgramId().equals(course.getProgramId())) {
             throw new BusinessRuleException("Cannot enroll in a course outside your academic program");
         }
 
+        // Determine authoritative current active academic term
         String termId = student.getCurrentTermId();
         if (termId == null || termId.isBlank()) {
-            termId = "term_2026_2";
+            AcademicTerm activeTerm = academicTermService.getCurrentActiveTerm(institutionId);
+            termId = activeTerm.getId();
         }
 
         // Authoritative term-aware unique enrollment identity: studentId + courseId + academicTermId
@@ -164,12 +202,14 @@ public class StudentController {
             enrollment = existing.get();
             if ("ENROLLED".equalsIgnoreCase(enrollment.getStatus())) {
                 throw new BusinessRuleException("Student is already enrolled in course " + course.getCode() + " for term " + termId);
+            } else if ("COMPLETED".equalsIgnoreCase(enrollment.getStatus())) {
+                throw new BusinessRuleException("Cannot re-enroll in course " + course.getCode() + " that has already been completed");
             }
             enrollment.setStatus("ENROLLED");
             enrollment.setEnrollmentDate(LocalDate.now());
             enrollment = courseEnrollmentRepository.save(enrollment);
         } else {
-            enrollment = CourseEnrollment.builder()
+            CourseEnrollment newEnrollment = CourseEnrollment.builder()
                     .id("enr_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16))
                     .studentId(student.getId())
                     .courseId(course.getId())
@@ -177,7 +217,11 @@ public class StudentController {
                     .enrollmentDate(LocalDate.now())
                     .status("ENROLLED")
                     .build();
-            enrollment = courseEnrollmentRepository.save(enrollment);
+            try {
+                enrollment = courseEnrollmentRepository.saveAndFlush(newEnrollment);
+            } catch (DataIntegrityViolationException ex) {
+                throw new BusinessRuleException("Concurrent enrollment detected: student already enrolled for this course and term");
+            }
         }
 
         auditService.recordEvent(
@@ -220,16 +264,24 @@ public class StudentController {
         Student student = studentRepository.findByInstitutionIdAndUserId(institutionId, currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("No student profile linked to your account"));
 
+        // Determine authoritative current active academic term
         String termId = student.getCurrentTermId();
         if (termId == null || termId.isBlank()) {
-            termId = "term_2026_2";
+            AcademicTerm activeTerm = academicTermService.getCurrentActiveTerm(institutionId);
+            termId = activeTerm.getId();
         }
 
-        // Locate active enrollment for current academic term, falling back to any active enrollment for the course
+        // Strictly term-aware lookup: find enrollment for this specific course and current academic term ONLY
         CourseEnrollment enrollment = courseEnrollmentRepository
                 .findByStudentIdAndCourseIdAndAcademicTermId(student.getId(), courseId, termId)
-                .orElseGet(() -> courseEnrollmentRepository.findByStudentIdAndCourseId(student.getId(), courseId)
-                        .orElseThrow(() -> new ResourceNotFoundException("No active enrollment found for course: " + courseId)));
+                .orElseThrow(() -> new ResourceNotFoundException("No active enrollment found for course " + courseId + " in current term " + termId));
+
+        if ("DROPPED".equalsIgnoreCase(enrollment.getStatus())) {
+            throw new BusinessRuleException("Course enrollment is already dropped for the current term");
+        }
+        if ("COMPLETED".equalsIgnoreCase(enrollment.getStatus())) {
+            throw new BusinessRuleException("Cannot drop a course that has already been completed");
+        }
 
         enrollment.setStatus("DROPPED");
         courseEnrollmentRepository.save(enrollment);
@@ -288,7 +340,7 @@ public class StudentController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get single student with IDOR ownership validation")
-    public ApiResponse<Student> getStudentById(@PathVariable String id) {
+    public ApiResponse<StudentResponseDto> getStudentById(@PathVariable String id) {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
         CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
 
@@ -310,13 +362,13 @@ public class StudentController {
             throw new UnauthorizedException("IDOR Violation: Access denied to student record " + id);
         }
 
-        return ApiResponse.success(student);
+        return ApiResponse.success(toDto(student));
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('STUDENT_EDIT') or hasRole('ADMIN')")
     @Operation(summary = "Create new student registry record")
-    public ApiResponse<Student> createStudent(@RequestBody Student student) {
+    public ApiResponse<StudentResponseDto> createStudent(@RequestBody Student student) {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
         student.setId("stu_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16));
         student.setInstitutionId(institutionId);
@@ -338,13 +390,13 @@ public class StudentController {
                 null, null
         );
 
-        return ApiResponse.success("Student created successfully", saved);
+        return ApiResponse.success("Student created successfully", toDto(saved));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('STUDENT_EDIT') or hasRole('ADMIN')")
     @Operation(summary = "Update student details")
-    public ApiResponse<Student> updateStudent(@PathVariable String id, @RequestBody Student update) {
+    public ApiResponse<StudentResponseDto> updateStudent(@PathVariable String id, @RequestBody Student update) {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
         Student student = studentRepository.findByInstitutionIdAndId(institutionId, id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
@@ -372,6 +424,6 @@ public class StudentController {
                 null, null
         );
 
-        return ApiResponse.success("Student updated successfully", saved);
+        return ApiResponse.success("Student updated successfully", toDto(saved));
     }
 }

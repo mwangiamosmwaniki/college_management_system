@@ -9,6 +9,7 @@ import ke.college.management.exceptions.BadRequestException;
 import ke.college.management.exceptions.ResourceNotFoundException;
 import ke.college.management.exceptions.UnauthorizedException;
 import ke.college.management.finance.dto.CreateInvoiceRequest;
+import ke.college.management.finance.dto.MpesaTransactionResponseDto;
 import ke.college.management.finance.dto.RecordPaymentRequest;
 import ke.college.management.finance.entity.FinancialLedger;
 import ke.college.management.finance.entity.Invoice;
@@ -68,7 +69,8 @@ public class FinanceController {
         boolean isStaff = currentUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
                                a.getAuthority().startsWith("ROLE_FINANCE") ||
-                               a.getAuthority().startsWith("ROLE_DEAN"));
+                               a.getAuthority().equals("FINANCE_VIEW") ||
+                               a.getAuthority().equals("FINANCE_MANAGE"));
         if (!isStaff) {
             Student callerStudent = studentRepository.findByInstitutionIdAndUserId(
                     currentInstitutionId, currentUser.getId()
@@ -188,15 +190,34 @@ public class FinanceController {
         return ApiResponse.success(paymentService.getStudentReceipts(studentId));
     }
 
+    private MpesaTransactionResponseDto toMpesaDto(MpesaTransaction tx) {
+        if (tx == null) return null;
+        return MpesaTransactionResponseDto.builder()
+                .id(tx.getId())
+                .institutionId(tx.getInstitutionId())
+                .studentId(tx.getStudentId())
+                .invoiceId(tx.getInvoiceId())
+                .phoneNumber(tx.getPhoneNumber())
+                .amount(tx.getAmount())
+                .accountReference(tx.getAccountReference())
+                .transactionCode(tx.getTransactionCode())
+                .mpesaReceiptNumber(tx.getMpesaReceiptNumber())
+                .transactionDate(tx.getTransactionDate())
+                .status(tx.getStatus())
+                .createdAt(tx.getCreatedAt())
+                .build();
+    }
+
     @PostMapping("/payments/mpesa/stk-push")
     @Operation(summary = "Initiate real M-Pesa STK Push payment")
-    public ApiResponse<MpesaTransaction> initiateMpesaPayment(@RequestBody MpesaInitiateRequest request) {
+    public ApiResponse<MpesaTransactionResponseDto> initiateMpesaPayment(@RequestBody MpesaInitiateRequest request) {
         String currentInstitutionId = SecurityUtils.getCurrentInstitutionId();
         CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
         boolean isStaff = currentUser.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
                                a.getAuthority().startsWith("ROLE_FINANCE") ||
-                               a.getAuthority().startsWith("ROLE_DEAN"));
+                               a.getAuthority().equals("FINANCE_VIEW") ||
+                               a.getAuthority().equals("FINANCE_MANAGE"));
 
         String effectiveStudentId = request.getStudentId();
         if (!isStaff) {
@@ -235,18 +256,28 @@ public class FinanceController {
                 request.getAmount(),
                 request.getAccountReference()
         );
-        return ApiResponse.success("M-Pesa payment prompt dispatched to " + tx.getPhoneNumber(), tx);
+        return ApiResponse.success("M-Pesa payment prompt dispatched to " + tx.getPhoneNumber(), toMpesaDto(tx));
     }
 
     @GetMapping("/mpesa/{id}")
     @Operation(summary = "Get status of an M-Pesa payment transaction")
-    public ApiResponse<MpesaTransaction> getMpesaTransaction(@PathVariable String id) {
+    public ApiResponse<MpesaTransactionResponseDto> getMpesaTransaction(@PathVariable String id) {
         MpesaTransaction tx = paymentService.getTransaction(id);
         SecurityUtils.validateTenantAccess(tx.getInstitutionId());
+
+        CustomUserDetails currentUser = SecurityUtils.getCurrentUserDetails();
+        boolean isStaff = currentUser.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("ROLE_ADMIN") ||
+                               a.getAuthority().startsWith("ROLE_FINANCE") ||
+                               a.getAuthority().equals("FINANCE_VIEW") ||
+                               a.getAuthority().equals("FINANCE_MANAGE"));
+
         if (tx.getStudentId() != null) {
             validateStudentAccess(tx.getStudentId());
+        } else if (!isStaff) {
+            throw new UnauthorizedException("Access denied: You are not authorized to view this transaction");
         }
-        return ApiResponse.success(tx);
+        return ApiResponse.success(toMpesaDto(tx));
     }
 
     @PostMapping("/payments/mpesa/callback")

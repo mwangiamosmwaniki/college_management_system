@@ -45,4 +45,26 @@ class SecurityAndTenantIsolationTests {
         mockMvc.perform(put("/api/v1/users/usr_admin/status?status=SUSPENDED"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @DisplayName("P0: Unauthenticated requests to /api/v1/finance/invoices must return 401 Unauthorized")
+    void unauthenticatedFinanceRequest_ReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/finance/invoices"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "student@apex.edu", roles = {"STUDENT"})
+    @DisplayName("P0: Student accessing /api/v1/finance/invoices must be rejected with 403 Forbidden")
+    void studentCallingFinanceInvoices_ReturnsForbidden() throws Exception {
+        mockMvc.perform(get("/api/v1/finance/invoices"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("P0: Unauthenticated student course access returns 401 Unauthorized")
+    void unauthenticatedStudentCourses_ReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/students/me/courses"))
+                .andExpect(status().isUnauthorized());
+    }
 }

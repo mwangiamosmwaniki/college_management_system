@@ -594,8 +594,8 @@ public class AuthService {
                 "USER",
                 user.getId(),
                 "SUCCESS",
-                httpRequest != null ? httpRequest.getRemoteAddr() : "127.0.0.1",
-                httpRequest != null ? httpRequest.getHeader("User-Agent") : "System",
+                httpRequest != null && httpRequest.getRemoteAddr() != null ? httpRequest.getRemoteAddr() : "UNKNOWN",
+                httpRequest != null && httpRequest.getHeader("User-Agent") != null ? httpRequest.getHeader("User-Agent") : "DirectClient",
                 UUID.randomUUID().toString(),
                 "Student account successfully activated and password set by user.",
                 null, null

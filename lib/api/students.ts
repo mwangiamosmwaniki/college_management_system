@@ -3,9 +3,10 @@ import { apiClient, ApiResponse } from './client';
 export interface StudentEntity {
   id: string;
   userId?: string;
-  institutionId: string;
+  institutionId?: string;
   campusId: string;
   programId: string;
+  currentTermId?: string;
   admissionNumber: string;
   fullName: string;
   gender?: string;

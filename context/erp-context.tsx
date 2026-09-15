@@ -496,9 +496,9 @@ export function ERPProvider({ children }: { children: ReactNode }) {
                 leadInstructorName: mc.instructorName || 'Lead Instructor',
                 instructorIds: ['inst_1'],
                 taIds: [],
-                enrolledStudentsCount: 45,
-                thumbnail: 'https://picsum.photos/seed/lms/600/400',
-                progressPercentage: 45,
+                enrolledStudentsCount: 0,
+                thumbnail: '',
+                progressPercentage: 0,
                 announcements: [
                   {
                     id: `ann_${mc.id}`,
@@ -616,16 +616,16 @@ export function ERPProvider({ children }: { children: ReactNode }) {
                 id: b.id,
                 isbn: b.isbn || 'N/A',
                 title: b.title,
-                authors: [b.author || 'Faculty Contributor'],
-                edition: '1st Edition',
-                publisher: 'University Press',
-                year: 2024,
+                authors: b.author ? [b.author] : [],
+                edition: '',
+                publisher: b.publisher || '',
+                year: new Date().getFullYear(),
                 category: b.category || 'General',
-                callNumber: `QA76.${b.title.charCodeAt(0)}`,
+                callNumber: '',
                 totalCopies: b.totalCopies,
                 availableCopies: b.availableCopies,
-                shelfLocation: b.shelfLocation || 'Section A',
-                coverImage: 'https://picsum.photos/seed/book/300/400'
+                shelfLocation: b.shelfLocation || '',
+                coverImage: ''
               }))
             );
           }
@@ -686,14 +686,14 @@ export function ERPProvider({ children }: { children: ReactNode }) {
                 id: a.id,
                 timestamp: a.createdAt,
                 userId: a.actorId || 'SYSTEM',
-                userName: a.actorIdentifier || 'System Operator',
-                userIdentifier: a.actorIdentifier || 'SYS-OP-01',
+                userName: a.actorIdentifier || a.actorId || 'System User',
+                userIdentifier: a.actorIdentifier || a.actorId || 'SYSTEM',
                 portalId: 'ADMIN',
                 roleName: 'System Auditor',
                 action: a.action,
                 resource: a.resourceType,
                 resourceId: a.resourceId,
-                ipAddress: a.ipAddress || '127.0.0.1',
+                ipAddress: a.ipAddress || '-',
                 status: a.status === 'SUCCESS' ? 'GRANTED' : 'DENIED',
                 details: a.details || ''
               }))
