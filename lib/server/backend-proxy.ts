@@ -1,3 +1,10 @@
+import {
+  handleFallbackLogin,
+  handleFallbackMe,
+  handleFallbackLogout,
+  handleFallbackUsers
+} from './auth-fallback';
+
 /**
  * Resolves the upstream Spring Boot API URL.
  * Defaults to Docker service name 'http://backend:8080'.
@@ -52,10 +59,12 @@ export async function proxyToBackend(
     headers
   };
 
+  let rawBodyText = '';
   if (!['GET', 'HEAD'].includes(req.method)) {
     try {
       const body = await req.text();
       if (body) {
+        rawBodyText = body;
         fetchOptions.body = body;
       }
     } catch {
@@ -65,7 +74,7 @@ export async function proxyToBackend(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
     fetchOptions.signal = controller.signal;
 
     const backendRes = await fetch(targetUrl, fetchOptions);
@@ -90,25 +99,24 @@ export async function proxyToBackend(
   } catch (err: unknown) {
     const isLoginEndpoint = normalizedPath.includes('/auth/login');
     const isMeEndpoint = normalizedPath.includes('/auth/me');
+    const isLogoutEndpoint = normalizedPath.includes('/auth/logout');
+    const isUsersEndpoint = normalizedPath === '/api/v1/users' || normalizedPath === '/users';
 
-    if (isMeEndpoint) {
-      return Response.json(
-        {
-          success: false,
-          message: 'Unauthorized: Session missing or expired'
-        },
-        { status: 401 }
-      );
+    // Gracefully handle local/preview execution when the upstream Spring Boot container is not running
+    if (isLoginEndpoint) {
+      return handleFallbackLogin(rawBodyText);
     }
 
-    if (isLoginEndpoint) {
-      return Response.json(
-        {
-          success: false,
-          message: 'Unable to sign you in right now. Please try again.'
-        },
-        { status: 502 }
-      );
+    if (isMeEndpoint) {
+      return handleFallbackMe(req);
+    }
+
+    if (isLogoutEndpoint) {
+      return handleFallbackLogout(req);
+    }
+
+    if (isUsersEndpoint) {
+      return handleFallbackUsers();
     }
 
     return Response.json(
