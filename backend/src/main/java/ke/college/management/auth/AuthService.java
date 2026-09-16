@@ -145,6 +145,7 @@ public class AuthService {
                     .roles(roles)
                     .permissions(permissions)
                     .portalAssignments(computePortalAssignments(roles))
+                    .defaultPortalId(computeDefaultPortalId(roles))
                     .build();
 
         } catch (BadCredentialsException ex) {
@@ -252,7 +253,23 @@ public class AuthService {
                 .roles(roles)
                 .permissions(permissions)
                 .portalAssignments(computePortalAssignments(roles))
+                .defaultPortalId(computeDefaultPortalId(roles))
                 .build();
+    }
+
+    public static String computeDefaultPortalId(List<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            return "STUDENT";
+        }
+        if (roles.contains("ADMIN")) return "ADMIN";
+        if (roles.contains("DEAN")) return "EXAMINATIONS";
+        if (roles.contains("REGISTRAR")) return "REGISTRAR";
+        if (roles.contains("HR")) return "HR";
+        if (roles.contains("FINANCE")) return "FINANCE";
+        if (roles.contains("LECTURER")) return "LECTURER";
+        if (roles.contains("STUDENT")) return "STUDENT";
+        if (roles.contains("APPLICANT")) return "APPLICANT";
+        return "STUDENT";
     }
 
     public static List<PortalAssignmentDto> computePortalAssignments(List<String> roles) {

@@ -174,24 +174,24 @@ export function CentralHeader() {
           {/* Right: Workspaces (if multiple) + Help + Notifications + Profile */}
           <div className="flex items-center gap-2">
 
-            {/* My Workspaces (only shown if user has more than 1 assigned portal) */}
+            {/* Authorized Portals Switcher (only shown if user has more than 1 assigned portal) */}
             {assignedPortals.length > 1 && (
               <div className="relative" ref={workspaceRef}>
                 <button
                   id="btn-my-workspaces"
                   onClick={() => setIsWorkspaceMenuOpen(!isWorkspaceMenuOpen)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 hover:text-slate-900 transition cursor-pointer"
-                  title="Switch to another authorized workspace"
+                  title="Switch to another authorized portal"
                 >
                   <Layers className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="hidden sm:inline">My Workspaces</span>
+                  <span className="hidden sm:inline">Portals</span>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
                 </button>
 
                 {isWorkspaceMenuOpen && (
                   <div className="absolute right-0 mt-2 w-72 rounded-xl bg-white border border-slate-200 shadow-xl p-2 z-50">
                     <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                      Authorized Workspaces
+                      Authorized Portals
                     </div>
                     <div className="max-h-72 overflow-y-auto py-1 space-y-1">
                       {assignedPortals.map(portal => {

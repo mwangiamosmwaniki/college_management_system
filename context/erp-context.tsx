@@ -337,9 +337,20 @@ export function ERPProvider({ children }: { children: ReactNode }) {
               faculty: serverUser.faculty || '',
               campus: serverUser.campus || '',
               status: (serverUser.status as any) || 'ACTIVE',
+              defaultPortalId: serverUser.defaultPortalId,
               portalAssignments: serverUser.portalAssignments || []
             };
             setCurrentUser(restoredUser);
+
+            // Automatically restore the default authorized portal
+            const assignedIds = restoredUser.portalAssignments.map(a => a.portalId);
+            let portalToActivate: PortalId = 'STUDENT';
+            if (restoredUser.defaultPortalId && assignedIds.includes(restoredUser.defaultPortalId)) {
+              portalToActivate = restoredUser.defaultPortalId;
+            } else if (assignedIds.length > 0) {
+              portalToActivate = assignedIds[0];
+            }
+            setActivePortalId(portalToActivate);
           }
         }
       } catch {
@@ -743,9 +754,9 @@ export function ERPProvider({ children }: { children: ReactNode }) {
   ): boolean => {
     setIsMobileSidebarOpen(false);
     const access = evaluatePortalAccess(currentUser, portalId, roles);
+    setActivePortalId(portalId);
+    setActiveNavTab(defaultTab);
     if (access.allowed) {
-      setActivePortalId(portalId);
-      setActiveNavTab(defaultTab);
       logAction(portalId, 'NAVIGATE_PORTAL', `Entered portal ${portalId}`, 'GRANTED', access.reason);
       return true;
     } else {
@@ -765,6 +776,7 @@ export function ERPProvider({ children }: { children: ReactNode }) {
 
     let resolvedPortal: PortalId =
       (targetPortal && targetPortal !== 'STAFF' ? targetPortal : null) ||
+      user.defaultPortalId ||
       user.portalAssignments[0]?.portalId ||
       'PUBLIC';
 

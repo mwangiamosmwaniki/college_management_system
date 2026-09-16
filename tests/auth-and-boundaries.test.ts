@@ -217,25 +217,27 @@ describe('Spring Boot Gateway and Backend Proxy Boundary Tests', () => {
     // Temporarily point to a dead port
     process.env.BACKEND_API_URL = 'http://127.0.0.1:59999';
 
-    const nextReq = new Request('http://localhost:3000/api/v1/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        identifier: 'ADM-001',
-        password: 'CorrectPassword123!',
-        tenantId: 'inst_apex_tvet'
-      })
-    });
+    try {
+      const nextReq = new Request('http://localhost:3000/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: 'ADM-001',
+          password: 'CorrectPassword123!',
+          tenantId: 'inst_apex_tvet'
+        })
+      });
 
-    const res = await proxyToBackend(nextReq, '/api/v1/auth/login');
-    assert.strictEqual(res.status, 502);
+      const res = await proxyToBackend(nextReq, '/api/v1/auth/login');
+      assert.strictEqual(res.status, 502);
 
-    const data = await res.json();
-    assert.strictEqual(data.success, false);
-    assert.strictEqual(data.message, 'Unable to sign you in right now. Please try again.');
-
-    // Restore valid URL
-    process.env.BACKEND_API_URL = backendBaseUrl;
+      const data = await res.json();
+      assert.strictEqual(data.success, false);
+      assert.strictEqual(data.message, 'Unable to sign you in right now. Please try again.');
+    } finally {
+      // Restore valid URL
+      process.env.BACKEND_API_URL = backendBaseUrl;
+    }
   });
 
   it('5. GET /api/v1/auth/me forwards session cookie and returns user identity', async () => {

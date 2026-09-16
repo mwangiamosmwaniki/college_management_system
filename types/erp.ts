@@ -78,6 +78,7 @@ export interface UserIdentity {
   phone?: string;
   status: 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'ON_LEAVE';
   portalAssignments: PortalAssignment[];
+  defaultPortalId?: PortalId;
   passwordHash?: string;
   pin?: string;
   impersonatedBy?: string;

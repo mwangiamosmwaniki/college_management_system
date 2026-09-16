@@ -9,14 +9,6 @@ import {
   User,
   Eye,
   EyeOff,
-  GraduationCap,
-  BookOpenCheck,
-  Library,
-  Receipt,
-  FileSpreadsheet,
-  Users,
-  UserCheck,
-  Layers,
   ArrowRight,
   ShieldCheck,
   HelpCircle,
@@ -39,85 +31,17 @@ export function UnifiedLoginModal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  // Authenticated user awaiting portal selection (if multiple assigned)
-  const [authenticatedUser, setAuthenticatedUser] = useState<UserIdentity | null>(null);
-
   if (!isLoginModalOpen) return null;
 
   const handleClose = () => {
     setErrorMsg(null);
     setShowForgotPassword(false);
-    setAuthenticatedUser(null);
     setIsLoginModalOpen(false);
-  };
-
-  const getPortalInfo = (id: PortalId) => {
-    switch (id) {
-      case 'STUDENT':
-        return {
-          name: 'Student Portal',
-          desc: 'Academic records, courses, semester results and student fees',
-          icon: <GraduationCap className="w-5 h-5 text-blue-600" />
-        };
-      case 'ELEARNING':
-        return {
-          name: 'E-Learning Environment',
-          desc: 'Course modules, lecture materials, assignments and tests',
-          icon: <BookOpenCheck className="w-5 h-5 text-emerald-600" />
-        };
-      case 'ELIBRARY':
-        return {
-          name: 'Digital Library & Catalog',
-          desc: 'Academic textbooks, journal papers, borrowings and reservations',
-          icon: <Library className="w-5 h-5 text-amber-600" />
-        };
-      case 'LECTURER':
-        return {
-          name: 'Faculty & Lecturer Portal',
-          desc: 'Class teaching, attendance rosters, assessments and gradebook',
-          icon: <BookOpenCheck className="w-5 h-5 text-blue-600" />
-        };
-      case 'FINANCE':
-        return {
-          name: 'Finance & Bursary',
-          desc: 'Tuition fees, payment registers, invoicing and reconciliation',
-          icon: <Receipt className="w-5 h-5 text-purple-600" />
-        };
-      case 'EXAMINATIONS':
-        return {
-          name: 'Examinations Directorate',
-          desc: 'Marks verification, Senate moderation and gazette transcripts',
-          icon: <FileSpreadsheet className="w-5 h-5 text-rose-600" />
-        };
-      case 'ADMISSIONS':
-        return {
-          name: 'Admissions & Registry',
-          desc: 'Candidate applications, verification and provisional offers',
-          icon: <UserCheck className="w-5 h-5 text-teal-600" />
-        };
-      case 'HR':
-        return {
-          name: 'Human Resources',
-          desc: 'Staff administration, faculty leaves and institutional payroll',
-          icon: <Users className="w-5 h-5 text-indigo-600" />
-        };
-      case 'ADMIN':
-        return {
-          name: 'Administration & Governance',
-          desc: 'System governance, user access controls, audit ledger and policy',
-          icon: <ShieldCheck className="w-5 h-5 text-slate-800" />
-        };
-      default:
-        return {
-          name: `${id} Workspace`,
-          desc: 'Institutional academic workspace',
-          icon: <Layers className="w-5 h-5 text-slate-600" />
-        };
-    }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent double submission
     setErrorMsg(null);
 
     const trimmedId = identifierInput.trim();
@@ -140,8 +64,7 @@ export function UnifiedLoginModal() {
         credentials: 'include',
         body: JSON.stringify({
           identifier: trimmedId,
-          password: passwordInput,
-          tenantId: institutionalSettings.institutionCode || institutionalSettings.code || 'inst_apex_tvet'
+          password: passwordInput
         })
       });
 
@@ -174,7 +97,6 @@ export function UnifiedLoginModal() {
       const serverData = data.data;
 
       // Verify that backend returned complete authoritative identity information
-      // Do NOT invent missing fields or construct synthetic identity
       if (
         (!serverData.id && !serverData.userId) ||
         !serverData.identifier ||
@@ -198,63 +120,42 @@ export function UnifiedLoginModal() {
         faculty: serverData.faculty || '',
         campus: serverData.campus || '',
         status: (serverData.status as any) || 'ACTIVE',
+        defaultPortalId: serverData.defaultPortalId,
         portalAssignments: serverData.portalAssignments && serverData.portalAssignments.length > 0
           ? serverData.portalAssignments
-          : serverData.roles.map((r: string) => {
-              const roleUpper = r.toUpperCase();
-              const portalId: PortalId =
-                roleUpper === 'ADMIN' ? 'ADMIN' :
-                roleUpper === 'STUDENT' ? 'STUDENT' :
-                roleUpper === 'LECTURER' ? 'LECTURER' :
-                roleUpper === 'FINANCE' ? 'FINANCE' :
-                roleUpper === 'DEAN' ? 'EXAMINATIONS' :
-                roleUpper === 'APPLICANT' ? 'ADMISSIONS' : 'STUDENT';
-              return {
-                portalId,
-                roleId: `ROLE_${roleUpper}`,
-                roleName: r,
-                isAdmin: roleUpper === 'ADMIN',
-                isMonitor: false,
-                assignedAt: new Date().toISOString()
-              };
-            })
+          : []
       };
 
-      proceedAfterAuthentication(authoritativeUser);
+      // Authoritative Automatic Portal Routing:
+      // 1. If a loginTargetPortal was requested as a routing hint AND is assigned to user, use it.
+      // 2. Otherwise use the backend-authoritative defaultPortalId.
+      // 3. Otherwise use the first assigned portal.
+      // 4. Never render a workspace selector.
+      const assignedPortalIds = authoritativeUser.portalAssignments.map(a => a.portalId);
+      let targetPortal: PortalId = 'STUDENT';
+      if (
+        loginTargetPortal &&
+        loginTargetPortal !== 'STAFF' &&
+        assignedPortalIds.includes(loginTargetPortal as PortalId)
+      ) {
+        targetPortal = loginTargetPortal as PortalId;
+      } else if (
+        authoritativeUser.defaultPortalId &&
+        assignedPortalIds.includes(authoritativeUser.defaultPortalId)
+      ) {
+        targetPortal = authoritativeUser.defaultPortalId;
+      } else if (assignedPortalIds.length > 0) {
+        targetPortal = assignedPortalIds[0];
+      }
+
+      loginUser(authoritativeUser, targetPortal);
+      handleClose();
     } catch {
       // Backend unavailable or network error: STRICTLY show standard failure message, NEVER authenticate locally
       setErrorMsg('Unable to sign you in right now. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const proceedAfterAuthentication = (user: UserIdentity) => {
-    const assignedPortals = user.portalAssignments.map(a => a.portalId);
-    const uniqueAssignedPortals = Array.from(new Set(assignedPortals));
-
-    // If only one portal is assigned, navigate directly
-    if (uniqueAssignedPortals.length === 1) {
-      loginUser(user, uniqueAssignedPortals[0]);
-      handleClose();
-      return;
-    }
-
-    // If target portal is already specified and assigned to user, navigate directly
-    if (loginTargetPortal && uniqueAssignedPortals.includes(loginTargetPortal as PortalId)) {
-      loginUser(user, loginTargetPortal as PortalId);
-      handleClose();
-      return;
-    }
-
-    // If multiple portals are assigned, show clean Workspace Selector
-    setAuthenticatedUser(user);
-  };
-
-  const handleSelectWorkspace = (portalId: PortalId) => {
-    if (!authenticatedUser) return;
-    loginUser(authenticatedUser, portalId);
-    handleClose();
   };
 
   return (
@@ -297,49 +198,7 @@ export function UnifiedLoginModal() {
 
         {/* Body Content */}
         <div className="p-6">
-          {authenticatedUser ? (
-            /* ------------------------------------------------------------- */
-            /* WORKSPACE SELECTOR (Section 51)                               */
-            /* ------------------------------------------------------------- */
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Welcome back, {authenticatedUser.name.split(' ')[0]}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Select an authorized workspace to begin your session:
-                </p>
-              </div>
-
-              <div className="space-y-2 pt-1">
-                {Array.from(new Set(authenticatedUser.portalAssignments.map(a => a.portalId))).map(portalId => {
-                  const info = getPortalInfo(portalId);
-                  return (
-                    <button
-                      key={portalId}
-                      onClick={() => handleSelectWorkspace(portalId)}
-                      className="w-full text-left p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition flex items-center justify-between group cursor-pointer"
-                    >
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 group-hover:bg-white shrink-0 mt-0.5">
-                          {info.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-700">
-                            {info.name}
-                          </h4>
-                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
-                            {info.desc}
-                          </p>
-                        </div>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition shrink-0 ml-2" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : showForgotPassword ? (
+          {showForgotPassword ? (
             /* ------------------------------------------------------------- */
             /* FORGOT PASSWORD SCREEN                                        */
             /* ------------------------------------------------------------- */
@@ -369,7 +228,7 @@ export function UnifiedLoginModal() {
             </div>
           ) : (
             /* ------------------------------------------------------------- */
-            /* STANDARD LOGIN FORM (Section 49)                              */
+            /* STANDARD LOGIN FORM                                           */
             /* ------------------------------------------------------------- */
             <form onSubmit={handleFormSubmit} className="space-y-4">
               {errorMsg && (

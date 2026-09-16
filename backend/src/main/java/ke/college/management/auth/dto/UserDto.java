@@ -23,4 +23,5 @@ public class UserDto {
     private List<String> roles;
     private List<String> permissions;
     private List<PortalAssignmentDto> portalAssignments;
+    private String defaultPortalId;
 }
