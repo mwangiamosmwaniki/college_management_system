@@ -10,6 +10,7 @@ import { CrossPortalEventsModal } from '@/components/common/CrossPortalEventsMod
 import { AuditTrailDrawer } from '@/components/common/AuditTrailDrawer';
 import { PortalHealthModal } from '@/components/common/PortalHealthModal';
 import { AccessDeniedView } from '@/components/common/AccessDeniedView';
+import { NoPortalAssignedView } from '@/components/common/NoPortalAssignedView';
 import { UnifiedLoginModal } from '@/components/common/UnifiedLoginModal';
 
 // Portal Views
@@ -83,14 +84,29 @@ function ERPAppContent() {
         return <AdmissionsPortalView />;
       case 'HOSTEL':
         return <HostelPortalView />;
+      case 'NO_PORTAL_ASSIGNED':
+        return <NoPortalAssignedView />;
       default:
-        return <StudentPortalView />;
+        return <NoPortalAssignedView />;
     }
   };
 
   const isAdminUser = currentUser.portalAssignments.some(
     a => a.portalId === 'ADMIN' && (a.isAdmin || a.roleId.includes('ADMIN') || a.roleId === 'ROLE_SUPER_ADMIN')
   );
+
+  // If user is in authenticated-but-no-portal state
+  if (activePortalId === 'NO_PORTAL_ASSIGNED') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white">
+        <CentralHeader />
+        <main className="flex-1 overflow-y-auto">
+          <NoPortalAssignedView />
+        </main>
+        <UnifiedLoginModal />
+      </div>
+    );
+  }
 
   // If active portal is the PUBLIC landing page, render dedicated institutional public layout
   if (activePortalId === 'PUBLIC') {

@@ -11,28 +11,46 @@ export interface PortalResolutionResult {
 /**
  * Single authoritative source of truth for resolving and validating a user's destination portal.
  * Enforces:
- * 1. Target portal hint validation (if user is authorized)
- * 2. Authoritative default portal validation (must be in user's authorized portal assignments)
- * 3. Fallback strictly to first authorized assignment
- * 4. Never blindly grant access or default to STUDENT for unauthorized users.
+ * 1. Target portal hint validation (strictly a navigation hint, only honored if user is authorized)
+ * 2. Authoritative default portal validation (must be in user's active, authorized portal assignments)
+ * 3. Fallback strictly to first active authorized assignment
+ * 4. Zero valid assignments -> 'NO_PORTAL_ASSIGNED' (never silently default to STUDENT or fabricate access)
  */
 export function resolveUserDestinationPortal(
   user: UserIdentity | null,
   targetPortalHint?: PortalId | 'STAFF' | null,
   rolesRegistry?: RoleDefinition[]
 ): PortalResolutionResult {
-  if (!user) {
+  // Unauthenticated visitors or guest browsing
+  if (!user || user.identifier === 'GUEST') {
     return { portalId: 'PUBLIC', isDefault: false, isValid: true };
   }
 
-  const authorizedAssignments = user.portalAssignments.filter((a) =>
-    rolesRegistry ? evaluatePortalAccess(user, a.portalId, rolesRegistry).allowed : true
-  );
+  // Active, unrevoked portal assignments
+  const authorizedAssignments = (user.portalAssignments || []).filter((a) => {
+    if (a.active === false || a.revokedAt) {
+      return false;
+    }
+    if (rolesRegistry) {
+      return evaluatePortalAccess(user, a.portalId, rolesRegistry).allowed;
+    }
+    return true;
+  });
 
   const authorizedPortalIds = new Set(authorizedAssignments.map((a) => a.portalId));
 
-  // 1. If explicit target portal hint provided (e.g. user clicked "Student Login" or navigated to a specific portal)
-  if (targetPortalHint && targetPortalHint !== 'STAFF' && targetPortalHint !== 'PUBLIC') {
+  // If user has NO active authorized portal assignments -> authenticated-but-no-portal state
+  if (authorizedAssignments.length === 0) {
+    return {
+      portalId: 'NO_PORTAL_ASSIGNED',
+      isDefault: false,
+      isValid: false,
+      reason: 'Your account is active, but no application portal or access rights have been assigned. Please contact your institution administrator.'
+    };
+  }
+
+  // 1. If explicit target portal hint provided (navigation request), check if user is actually authorized
+  if (targetPortalHint && targetPortalHint !== 'STAFF' && targetPortalHint !== 'PUBLIC' && targetPortalHint !== 'NO_PORTAL_ASSIGNED') {
     if (authorizedPortalIds.has(targetPortalHint)) {
       return {
         portalId: targetPortalHint,
@@ -40,6 +58,7 @@ export function resolveUserDestinationPortal(
         isValid: true
       };
     }
+    // Target portal hint is NOT authorized; ignore hint and proceed to authoritative resolution
   }
 
   // 2. Authoritative default portal check
@@ -51,21 +70,21 @@ export function resolveUserDestinationPortal(
     };
   }
 
-  // 3. Fallback to first authorized assignment
-  if (authorizedAssignments.length > 0) {
+  // Check if any assignment is marked isDefault
+  const explicitDefaultAssignment = authorizedAssignments.find((a) => a.isDefault);
+  if (explicitDefaultAssignment) {
     return {
-      portalId: authorizedAssignments[0].portalId,
-      isDefault: false,
-      isValid: true,
-      reason: 'Default portal was unassigned or unauthorized; routed to primary assigned portal'
+      portalId: explicitDefaultAssignment.portalId,
+      isDefault: true,
+      isValid: true
     };
   }
 
-  // 4. No authorized internal portal
+  // 3. Fallback strictly to first authorized assignment
   return {
-    portalId: 'PUBLIC',
+    portalId: authorizedAssignments[0].portalId,
     isDefault: false,
-    isValid: false,
-    reason: 'User has no authorized internal portal assignments'
+    isValid: true,
+    reason: 'Routed to first authorized institutional assignment'
   };
 }

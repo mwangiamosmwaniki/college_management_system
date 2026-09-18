@@ -39,14 +39,16 @@ export function evaluatePortalAccess(
   portalId: PortalId,
   rolesRegistry: RoleDefinition[]
 ): { allowed: boolean; roleName?: string; assignment?: PortalAssignment; reason: string } {
-  // Public Portal and Applicant Admissions Portal are accessible to everyone / prospective trainees
-  if (portalId === 'PUBLIC' || portalId === 'APPLICANT') {
+  // Public Portal, Applicant Portal, and Authenticated No-Portal state are accessible
+  if (portalId === 'PUBLIC' || portalId === 'APPLICANT' || portalId === 'NO_PORTAL_ASSIGNED') {
     return {
       allowed: true,
-      roleName: portalId === 'PUBLIC' ? 'Public Visitor' : 'Prospective Applicant',
+      roleName: portalId === 'PUBLIC' ? 'Public Visitor' : portalId === 'APPLICANT' ? 'Prospective Applicant' : 'Unassigned Account',
       reason: portalId === 'PUBLIC'
         ? 'Public website and prospectus portal is openly accessible to all.'
-        : 'Applicant admissions and tracking portal is openly accessible to prospective trainees.'
+        : portalId === 'APPLICANT'
+        ? 'Applicant admissions and tracking portal is openly accessible to prospective trainees.'
+        : 'Authenticated account without assigned application portals.'
     };
   }
 
@@ -60,10 +62,10 @@ export function evaluatePortalAccess(
 
   // Super Admin can access all portals by default, but still operates under administrative audit
   const isSuperAdmin = user.portalAssignments.some(
-    a => a.portalId === 'ADMIN' && a.roleId === 'ROLE_SUPER_ADMIN'
+    a => a.portalId === 'ADMIN' && a.roleId === 'ROLE_SUPER_ADMIN' && a.active !== false && !a.revokedAt
   );
 
-  const directAssignment = user.portalAssignments.find(a => a.portalId === portalId);
+  const directAssignment = user.portalAssignments.find(a => a.portalId === portalId && a.active !== false && !a.revokedAt);
 
   if (directAssignment) {
     const roleDef = rolesRegistry.find(r => r.id === directAssignment.roleId);
@@ -151,10 +153,10 @@ export function hasPermission(
   }
 ): RBACEvaluationResult {
   const isSuperAdmin = user.portalAssignments.some(
-    a => a.portalId === 'ADMIN' && a.roleId === 'ROLE_SUPER_ADMIN'
+    a => a.portalId === 'ADMIN' && a.roleId === 'ROLE_SUPER_ADMIN' && a.active !== false && !a.revokedAt
   );
 
-  const assignment = user.portalAssignments.find(a => a.portalId === portalId);
+  const assignment = user.portalAssignments.find(a => a.portalId === portalId && a.active !== false && !a.revokedAt);
 
   if (!assignment && !isSuperAdmin) {
     return {

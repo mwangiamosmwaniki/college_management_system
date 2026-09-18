@@ -52,6 +52,10 @@ export function PortalNavigation() {
     toggleSidebarCollapse
   } = useERP();
 
+  if (activePortalId === 'PUBLIC' || activePortalId === 'NO_PORTAL_ASSIGNED') {
+    return null;
+  }
+
   const activePortal = portals.find(p => p.id === activePortalId) || portals[0];
   const assignment = currentUser.portalAssignments.find(a => a.portalId === activePortalId);
 

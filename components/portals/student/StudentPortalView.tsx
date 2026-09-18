@@ -49,8 +49,8 @@ export function StudentPortalView() {
     openInstitutionalDocument
   } = useERP();
 
-  const canAccessELearning = currentUser.portalAssignments.some(a => a.portalId === 'ELEARNING');
-  const canAccessELibrary = currentUser.portalAssignments.some(a => a.portalId === 'ELIBRARY');
+  const canAccessELearning = currentUser.portalAssignments.some(a => a.portalId === 'ELEARNING' && a.active !== false && !a.revokedAt);
+  const canAccessELibrary = currentUser.portalAssignments.some(a => a.portalId === 'ELIBRARY' && a.active !== false && !a.revokedAt);
 
   // State for submitting a new student request
   const [reqType, setReqType] = useState<StudentRequest['type']>('OFFICIAL_TRANSCRIPT');

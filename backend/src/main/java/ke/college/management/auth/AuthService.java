@@ -24,6 +24,8 @@ import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.RateLimiterService;
 import ke.college.management.security.SecurityUtils;
 import ke.college.management.users.entity.User;
+import ke.college.management.users.entity.UserPortalAssignment;
+import ke.college.management.users.repository.UserPortalAssignmentRepository;
 import ke.college.management.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +64,7 @@ public class AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final UserPortalAssignmentRepository userPortalAssignmentRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AccountActivationTokenRepository accountActivationTokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -137,8 +140,12 @@ public class AuthService {
                     null
             );
 
-            List<PortalAssignmentDto> portalAssignments = computePortalAssignments(roles);
-            String authoritativeDefaultPortal = resolveAndValidateDefaultPortal(user, roles, portalAssignments);
+            List<PortalAssignmentDto> portalAssignments = getActivePortalAssignments(userDetails.getId());
+            List<String> allowedPortalIds = portalAssignments.stream()
+                    .map(PortalAssignmentDto::getPortalId)
+                    .distinct()
+                    .toList();
+            String authoritativeDefaultPortal = resolveAndValidateDefaultPortal(user, portalAssignments);
 
             // Return AuthResponse WITHOUT exposing sessionId in response payload (HTTP-only cookie handles session)
             return AuthResponse.builder()
@@ -150,6 +157,7 @@ public class AuthService {
                     .roles(roles)
                     .permissions(permissions)
                     .portalAssignments(portalAssignments)
+                    .allowedPortalIds(allowedPortalIds)
                     .defaultPortalId(authoritativeDefaultPortal)
                     .build();
 
@@ -246,8 +254,12 @@ public class AuthService {
                 .distinct()
                 .toList();
 
-        List<PortalAssignmentDto> portalAssignments = computePortalAssignments(roles);
-        String authoritativeDefaultPortal = resolveAndValidateDefaultPortal(user, roles, portalAssignments);
+        List<PortalAssignmentDto> portalAssignments = getActivePortalAssignments(user.getId());
+        List<String> allowedPortalIds = portalAssignments.stream()
+                .map(PortalAssignmentDto::getPortalId)
+                .distinct()
+                .toList();
+        String authoritativeDefaultPortal = resolveAndValidateDefaultPortal(user, portalAssignments);
 
         return UserDto.builder()
                 .id(user.getId())
@@ -261,12 +273,35 @@ public class AuthService {
                 .roles(roles)
                 .permissions(permissions)
                 .portalAssignments(portalAssignments)
+                .allowedPortalIds(allowedPortalIds)
                 .defaultPortalId(authoritativeDefaultPortal)
                 .build();
     }
 
-    public String resolveAndValidateDefaultPortal(User user, List<String> roles, List<PortalAssignmentDto> assignments) {
+    @Transactional(readOnly = true)
+    public List<PortalAssignmentDto> getActivePortalAssignments(String userId) {
+        List<UserPortalAssignment> assignments = userPortalAssignmentRepository.findByUserIdAndActiveTrue(userId);
+        return assignments.stream()
+                .filter(a -> a.getRevokedAt() == null)
+                .map(a -> PortalAssignmentDto.builder()
+                        .id(a.getId())
+                        .portalId(a.getPortalId())
+                        .roleId(a.getRole() != null ? a.getRole().getId() : null)
+                        .roleName(a.getRole() != null ? a.getRole().getName() : a.getPortalId() + " User")
+                        .isDefault(Boolean.TRUE.equals(a.getIsDefault()))
+                        .institutionId(a.getInstitutionId())
+                        .active(Boolean.TRUE.equals(a.getActive()))
+                        .isAdmin(a.getRole() != null && (a.getRole().getCode().contains("ADMIN") || a.getRole().getCode().contains("SUPER_ADMIN")))
+                        .isMonitor(false)
+                        .assignedAt(a.getAssignedAt() != null ? a.getAssignedAt().toString() : null)
+                        .revokedAt(a.getRevokedAt() != null ? a.getRevokedAt().toString() : null)
+                        .build())
+                .toList();
+    }
+
+    public String resolveAndValidateDefaultPortal(User user, List<PortalAssignmentDto> assignments) {
         if (assignments == null || assignments.isEmpty()) {
+            // Authentic authenticated-but-no-portal state: NEVER default to STUDENT!
             return null;
         }
 
@@ -274,20 +309,26 @@ public class AuthService {
                 .map(PortalAssignmentDto::getPortalId)
                 .collect(Collectors.toSet());
 
-        // 1. Explicitly persisted domain-level default portal on User entity
+        // 1. Explicit domain-level is_default flag on UserPortalAssignment
+        Optional<PortalAssignmentDto> explicitDefault = assignments.stream()
+                .filter(PortalAssignmentDto::isDefault)
+                .findFirst();
+        if (explicitDefault.isPresent()) {
+            return explicitDefault.get().getPortalId();
+        }
+
+        // 2. Explicitly persisted domain-level default portal on User entity
         if (user != null && user.getDefaultPortalId() != null && !user.getDefaultPortalId().isBlank()) {
             String persisted = user.getDefaultPortalId().trim().toUpperCase();
             if (authorizedPortalIds.contains(persisted)) {
                 return persisted;
             }
-            // If the persisted default is NOT in authorized portals, repair it:
-            // Do NOT blindly default to STUDENT. Select authoritatively from actual authorized assignments.
         }
 
-        // 2. Authoritative selection: first authorized assignment
+        // 3. First authorized domain assignment
         String fallbackAuthorized = assignments.get(0).getPortalId();
 
-        // 3. Persist the repair or initial assignment if user entity is available
+        // 4. Persist the repair or initial assignment if user entity is available
         if (user != null && (user.getDefaultPortalId() == null || !authorizedPortalIds.contains(user.getDefaultPortalId()))) {
             user.setDefaultPortalId(fallbackAuthorized);
             userRepository.save(user);
@@ -296,138 +337,8 @@ public class AuthService {
         return fallbackAuthorized;
     }
 
-    public static List<PortalAssignmentDto> computePortalAssignments(List<String> roles) {
-        List<PortalAssignmentDto> list = new ArrayList<>();
-        String now = Instant.now().toString();
-        boolean hasAdmin = roles.contains("ADMIN");
-        boolean hasLecturer = roles.contains("LECTURER");
-        boolean hasDean = roles.contains("DEAN");
-        boolean hasStudent = roles.contains("STUDENT");
-        boolean hasFinance = roles.contains("FINANCE");
-        boolean hasRegistrar = roles.contains("REGISTRAR");
-        boolean hasHr = roles.contains("HR");
-        boolean hasApplicant = roles.contains("APPLICANT");
-
-        if (hasAdmin) {
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("ADMIN")
-                    .roleId("ROLE_ADMIN")
-                    .roleName("System Administrator")
-                    .isAdmin(true)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-        }
-        if (hasDean) {
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("EXAMINATIONS")
-                    .roleId("ROLE_DEAN")
-                    .roleName("Dean / Examinations Directorate")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("LECTURER")
-                    .roleId("ROLE_DEAN")
-                    .roleName("Faculty / Lecturer")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("ELEARNING")
-                    .roleId("ROLE_DEAN")
-                    .roleName("E-Learning Instructor")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-        } else if (hasLecturer) {
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("LECTURER")
-                    .roleId("ROLE_LECTURER")
-                    .roleName("Lecturer & Instructor")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("ELEARNING")
-                    .roleId("ROLE_LECTURER")
-                    .roleName("E-Learning Instructor")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-        }
-        if (hasFinance) {
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("FINANCE")
-                    .roleId("ROLE_FINANCE")
-                    .roleName("Finance & Bursary Officer")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-        }
-        if (hasRegistrar) {
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("ADMISSIONS")
-                    .roleId("ROLE_REGISTRAR")
-                    .roleName("Registrar / Admissions Officer")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-        }
-        if (hasHr) {
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("HR")
-                    .roleId("ROLE_HR")
-                    .roleName("Human Resources")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-        }
-        if (hasStudent) {
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("STUDENT")
-                    .roleId("ROLE_STUDENT")
-                    .roleName("Student Scholar")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("ELEARNING")
-                    .roleId("ROLE_STUDENT")
-                    .roleName("E-Learning Student")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("ELIBRARY")
-                    .roleId("ROLE_STUDENT")
-                    .roleName("Digital Library Patron")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-        }
-        if (hasApplicant && list.isEmpty()) {
-            list.add(PortalAssignmentDto.builder()
-                    .portalId("ADMISSIONS")
-                    .roleId("ROLE_APPLICANT")
-                    .roleName("Admissions Applicant")
-                    .isAdmin(false)
-                    .isMonitor(false)
-                    .assignedAt(now)
-                    .build());
-        }
-        return list;
+    public String resolveAndValidateDefaultPortal(User user, List<String> roles, List<PortalAssignmentDto> assignments) {
+        return resolveAndValidateDefaultPortal(user, assignments);
     }
 
     @Transactional

@@ -10,10 +10,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PortalAssignmentDto {
+    private String id;
     private String portalId;
     private String roleId;
     private String roleName;
+    private boolean isDefault;
+    private String institutionId;
+    private boolean active;
     private boolean isAdmin;
     private boolean isMonitor;
     private String assignedAt;
+    private String revokedAt;
 }

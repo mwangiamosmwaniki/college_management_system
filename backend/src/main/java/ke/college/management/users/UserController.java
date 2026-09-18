@@ -13,15 +13,21 @@ import ke.college.management.exceptions.ResourceNotFoundException;
 import ke.college.management.exceptions.UnauthorizedException;
 import ke.college.management.security.CustomUserDetails;
 import ke.college.management.security.SecurityUtils;
+import ke.college.management.users.entity.Role;
 import ke.college.management.users.entity.User;
+import ke.college.management.users.entity.UserPortalAssignment;
+import ke.college.management.users.repository.RoleRepository;
+import ke.college.management.users.repository.UserPortalAssignmentRepository;
 import ke.college.management.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -37,6 +44,8 @@ import java.util.List;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final UserPortalAssignmentRepository userPortalAssignmentRepository;
+    private final RoleRepository roleRepository;
     private final AuditService auditService;
     private final AuthService authService;
 
@@ -56,9 +65,10 @@ public class UserController {
                 : userRepository.findByInstitutionId(institutionId, pageRequest);
 
         Page<UserDto> dtoPage = userPage.map(u -> {
-            List<String> roles = u.getRoles().stream().map(r -> r.getCode()).toList();
-            List<PortalAssignmentDto> assignments = AuthService.computePortalAssignments(roles);
-            String defaultPortal = authService.resolveAndValidateDefaultPortal(u, roles, assignments);
+            List<String> roles = u.getRoles().stream().map(Role::getCode).toList();
+            List<PortalAssignmentDto> assignments = authService.getActivePortalAssignments(u.getId());
+            List<String> allowedPortals = assignments.stream().map(PortalAssignmentDto::getPortalId).distinct().toList();
+            String defaultPortal = authService.resolveAndValidateDefaultPortal(u, assignments);
             return UserDto.builder()
                 .id(u.getId())
                 .identifier(u.getIdentifier())
@@ -71,6 +81,7 @@ public class UserController {
                 .roles(roles)
                 .permissions(u.getRoles().stream().flatMap(r -> r.getPermissions().stream()).map(p -> p.getCode()).distinct().toList())
                 .portalAssignments(assignments)
+                .allowedPortalIds(allowedPortals)
                 .defaultPortalId(defaultPortal)
                 .build();
         });
@@ -105,18 +116,25 @@ public class UserController {
                 saved.getId(),
                 "SUCCESS",
                 null, null, null,
-                "Changed account status of " + saved.getEmail() + " to " + status,
-                previousStatus, status
+                "Status changed from " + previousStatus + " to " + status.toUpperCase(),
+                previousStatus, status.toUpperCase()
         );
 
-        return ApiResponse.success("Status updated to " + status, UserDto.builder()
+        List<PortalAssignmentDto> assignments = authService.getActivePortalAssignments(saved.getId());
+        List<String> allowedPortals = assignments.stream().map(PortalAssignmentDto::getPortalId).distinct().toList();
+        String defaultPortal = authService.resolveAndValidateDefaultPortal(saved, assignments);
+
+        return ApiResponse.success("User status updated successfully", UserDto.builder()
                 .id(saved.getId())
                 .identifier(saved.getIdentifier())
                 .email(saved.getEmail())
                 .fullName(saved.getFullName())
                 .institutionId(saved.getInstitutionId())
                 .status(saved.getStatus())
-                .roles(saved.getRoles().stream().map(r -> r.getCode()).toList())
+                .roles(saved.getRoles().stream().map(Role::getCode).toList())
+                .portalAssignments(assignments)
+                .allowedPortalIds(allowedPortals)
+                .defaultPortalId(defaultPortal)
                 .build());
     }
 
@@ -133,8 +151,8 @@ public class UserController {
 
         SecurityUtils.validateTenantAccess(user.getInstitutionId());
 
-        List<String> roles = user.getRoles().stream().map(r -> r.getCode()).toList();
-        List<PortalAssignmentDto> assignments = AuthService.computePortalAssignments(roles);
+        List<String> roles = user.getRoles().stream().map(Role::getCode).toList();
+        List<PortalAssignmentDto> assignments = authService.getActivePortalAssignments(user.getId());
         boolean isAuthorized = assignments.stream()
                 .anyMatch(a -> a.getPortalId().equalsIgnoreCase(portalId));
 
@@ -169,6 +187,7 @@ public class UserController {
                 .status(saved.getStatus())
                 .roles(roles)
                 .portalAssignments(assignments)
+                .allowedPortalIds(assignments.stream().map(PortalAssignmentDto::getPortalId).distinct().toList())
                 .defaultPortalId(saved.getDefaultPortalId())
                 .build());
     }
@@ -182,8 +201,8 @@ public class UserController {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        List<String> roles = user.getRoles().stream().map(r -> r.getCode()).toList();
-        List<PortalAssignmentDto> assignments = AuthService.computePortalAssignments(roles);
+        List<String> roles = user.getRoles().stream().map(Role::getCode).toList();
+        List<PortalAssignmentDto> assignments = authService.getActivePortalAssignments(user.getId());
         boolean isAuthorized = assignments.stream()
                 .anyMatch(a -> a.getPortalId().equalsIgnoreCase(portalId));
 
@@ -218,7 +237,135 @@ public class UserController {
                 .status(saved.getStatus())
                 .roles(roles)
                 .portalAssignments(assignments)
+                .allowedPortalIds(assignments.stream().map(PortalAssignmentDto::getPortalId).distinct().toList())
                 .defaultPortalId(saved.getDefaultPortalId())
+                .build());
+    }
+
+    @PostMapping("/{id}/portal-assignments")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Assign a portal to a user (administrator only)")
+    public ApiResponse<UserDto> assignPortalToUser(
+            @PathVariable String id,
+            @RequestParam String portalId,
+            @RequestParam(required = false) String roleId,
+            @RequestParam(defaultValue = "false") boolean isDefault
+    ) {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        SecurityUtils.validateTenantAccess(user.getInstitutionId());
+
+        String normPortal = portalId.trim().toUpperCase();
+        UserPortalAssignment assignment = userPortalAssignmentRepository
+                .findByUserIdAndPortalId(user.getId(), normPortal)
+                .orElseGet(() -> UserPortalAssignment.builder()
+                        .id("upa_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16))
+                        .user(user)
+                        .portalId(normPortal)
+                        .institutionId(user.getInstitutionId())
+                        .build());
+
+        if (roleId != null && !roleId.isBlank()) {
+            Role role = roleRepository.findById(roleId).orElse(null);
+            assignment.setRole(role);
+        }
+
+        assignment.setActive(true);
+        assignment.setRevokedAt(null);
+        assignment.setIsDefault(isDefault);
+        assignment.setAssignedAt(Instant.now());
+        assignment.setUpdatedAt(Instant.now());
+        userPortalAssignmentRepository.save(assignment);
+
+        if (isDefault) {
+            user.setDefaultPortalId(normPortal);
+            userRepository.save(user);
+        }
+
+        auditService.recordEvent(
+                institutionId,
+                SecurityUtils.getCurrentUserId(),
+                SecurityUtils.getCurrentUserDetails().getIdentifier(),
+                "USER_PORTAL_ASSIGNED",
+                "USER_PORTAL_ASSIGNMENT",
+                assignment.getId(),
+                "SUCCESS",
+                null, null, null,
+                "Assigned portal " + normPortal + " to user " + user.getEmail(),
+                null, normPortal
+        );
+
+        List<PortalAssignmentDto> assignments = authService.getActivePortalAssignments(user.getId());
+        return ApiResponse.success("Portal assigned successfully", UserDto.builder()
+                .id(user.getId())
+                .identifier(user.getIdentifier())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .institutionId(user.getInstitutionId())
+                .status(user.getStatus())
+                .roles(user.getRoles().stream().map(Role::getCode).toList())
+                .portalAssignments(assignments)
+                .allowedPortalIds(assignments.stream().map(PortalAssignmentDto::getPortalId).distinct().toList())
+                .defaultPortalId(user.getDefaultPortalId())
+                .build());
+    }
+
+    @DeleteMapping("/{id}/portal-assignments/{portalId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Revoke a portal assignment from a user with immediate effect")
+    public ApiResponse<UserDto> revokePortalFromUser(
+            @PathVariable String id,
+            @PathVariable String portalId
+    ) {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        SecurityUtils.validateTenantAccess(user.getInstitutionId());
+
+        String normPortal = portalId.trim().toUpperCase();
+        UserPortalAssignment assignment = userPortalAssignmentRepository
+                .findByUserIdAndPortalId(user.getId(), normPortal)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment for portal " + normPortal + " not found"));
+
+        assignment.setActive(false);
+        assignment.setRevokedAt(Instant.now());
+        assignment.setIsDefault(false);
+        assignment.setUpdatedAt(Instant.now());
+        userPortalAssignmentRepository.save(assignment);
+
+        // If the revoked portal was the user's default, recalculate default
+        List<PortalAssignmentDto> remaining = authService.getActivePortalAssignments(user.getId());
+        String repairedDefault = authService.resolveAndValidateDefaultPortal(user, remaining);
+        user.setDefaultPortalId(repairedDefault);
+        userRepository.save(user);
+
+        auditService.recordEvent(
+                institutionId,
+                SecurityUtils.getCurrentUserId(),
+                SecurityUtils.getCurrentUserDetails().getIdentifier(),
+                "USER_PORTAL_REVOKED",
+                "USER_PORTAL_ASSIGNMENT",
+                assignment.getId(),
+                "SUCCESS",
+                null, null, null,
+                "Revoked portal " + normPortal + " from user " + user.getEmail(),
+                normPortal, null
+        );
+
+        return ApiResponse.success("Portal access revoked successfully", UserDto.builder()
+                .id(user.getId())
+                .identifier(user.getIdentifier())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .institutionId(user.getInstitutionId())
+                .status(user.getStatus())
+                .roles(user.getRoles().stream().map(Role::getCode).toList())
+                .portalAssignments(remaining)
+                .allowedPortalIds(remaining.stream().map(PortalAssignmentDto::getPortalId).distinct().toList())
+                .defaultPortalId(user.getDefaultPortalId())
                 .build());
     }
 }

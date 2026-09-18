@@ -23,7 +23,8 @@ export type PortalId =
   | 'ALUMNI'
   | 'PARENT'
   | 'SUPPORT'
-  | 'RESEARCH';
+  | 'RESEARCH'
+  | 'NO_PORTAL_ASSIGNED';
 
 export type PortalStatus = 'ONLINE' | 'DEGRADED' | 'MAINTENANCE' | 'OFFLINE';
 
@@ -55,14 +56,19 @@ export interface UserScope {
 }
 
 export interface PortalAssignment {
+  id?: string;
   portalId: PortalId;
   roleId: string;
   roleName: string;
+  isDefault?: boolean;
+  institutionId?: string;
+  active?: boolean;
   isMonitor?: boolean;
   isAdmin?: boolean;
   scope?: UserScope;
   customPermissions?: string[];
   assignedAt: string;
+  revokedAt?: string | null;
 }
 
 export interface UserIdentity {
@@ -78,6 +84,7 @@ export interface UserIdentity {
   phone?: string;
   status: 'ACTIVE' | 'SUSPENDED' | 'GRADUATED' | 'ON_LEAVE';
   portalAssignments: PortalAssignment[];
+  allowedPortalIds?: PortalId[];
   defaultPortalId?: PortalId;
   passwordHash?: string;
   pin?: string;
