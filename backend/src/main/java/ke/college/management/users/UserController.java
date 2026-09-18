@@ -24,6 +24,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -140,6 +141,7 @@ public class UserController {
 
     @PutMapping("/{id}/default-portal")
     @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
     @Operation(summary = "Update user default portal (authorized administrator only)")
     public ApiResponse<UserDto> updateUserDefaultPortal(
             @PathVariable String id,
@@ -151,17 +153,27 @@ public class UserController {
 
         SecurityUtils.validateTenantAccess(user.getInstitutionId());
 
+        String normPortal = portalId.trim().toUpperCase();
         List<String> roles = user.getRoles().stream().map(Role::getCode).toList();
         List<PortalAssignmentDto> assignments = authService.getActivePortalAssignments(user.getId());
         boolean isAuthorized = assignments.stream()
-                .anyMatch(a -> a.getPortalId().equalsIgnoreCase(portalId));
+                .anyMatch(a -> a.getPortalId().equalsIgnoreCase(normPortal));
 
         if (!isAuthorized) {
             throw new BadRequestException("Requested default portal is not among user's authorized portal assignments");
         }
 
+        // Atomically unset existing defaults to maintain one active default per user & institution
+        userPortalAssignmentRepository.unsetAllDefaultsForUser(user.getId(), user.getInstitutionId());
+        userPortalAssignmentRepository.findByUserIdAndPortalId(user.getId(), normPortal)
+                .ifPresent(a -> {
+                    a.setIsDefault(true);
+                    a.setUpdatedAt(Instant.now());
+                    userPortalAssignmentRepository.save(a);
+                });
+
         String prev = user.getDefaultPortalId();
-        user.setDefaultPortalId(portalId.toUpperCase());
+        user.setDefaultPortalId(normPortal);
         user.setUpdatedAt(Instant.now());
         User saved = userRepository.save(user);
 
@@ -174,10 +186,11 @@ public class UserController {
                 saved.getId(),
                 "SUCCESS",
                 null, null, null,
-                "Changed default portal of " + saved.getEmail() + " to " + portalId.toUpperCase(),
-                prev, portalId.toUpperCase()
+                "Changed default portal of " + saved.getEmail() + " to " + normPortal,
+                prev, normPortal
         );
 
+        List<PortalAssignmentDto> refreshedAssignments = authService.getActivePortalAssignments(saved.getId());
         return ApiResponse.success("Default portal updated successfully", UserDto.builder()
                 .id(saved.getId())
                 .identifier(saved.getIdentifier())
@@ -186,14 +199,15 @@ public class UserController {
                 .institutionId(saved.getInstitutionId())
                 .status(saved.getStatus())
                 .roles(roles)
-                .portalAssignments(assignments)
-                .allowedPortalIds(assignments.stream().map(PortalAssignmentDto::getPortalId).distinct().toList())
+                .portalAssignments(refreshedAssignments)
+                .allowedPortalIds(refreshedAssignments.stream().map(PortalAssignmentDto::getPortalId).distinct().toList())
                 .defaultPortalId(saved.getDefaultPortalId())
                 .build());
     }
 
     @PutMapping("/me/default-portal")
     @PreAuthorize("isAuthenticated()")
+    @Transactional
     @Operation(summary = "Update authenticated user's own preferred default portal")
     public ApiResponse<UserDto> updateMyDefaultPortal(@RequestParam String portalId) {
         String institutionId = SecurityUtils.getCurrentInstitutionId();
@@ -201,17 +215,27 @@ public class UserController {
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        String normPortal = portalId.trim().toUpperCase();
         List<String> roles = user.getRoles().stream().map(Role::getCode).toList();
         List<PortalAssignmentDto> assignments = authService.getActivePortalAssignments(user.getId());
         boolean isAuthorized = assignments.stream()
-                .anyMatch(a -> a.getPortalId().equalsIgnoreCase(portalId));
+                .anyMatch(a -> a.getPortalId().equalsIgnoreCase(normPortal));
 
         if (!isAuthorized) {
             throw new BadRequestException("Requested default portal is not among your authorized portal assignments");
         }
 
+        // Atomically unset existing defaults to maintain one active default per user & institution
+        userPortalAssignmentRepository.unsetAllDefaultsForUser(user.getId(), user.getInstitutionId());
+        userPortalAssignmentRepository.findByUserIdAndPortalId(user.getId(), normPortal)
+                .ifPresent(a -> {
+                    a.setIsDefault(true);
+                    a.setUpdatedAt(Instant.now());
+                    userPortalAssignmentRepository.save(a);
+                });
+
         String prev = user.getDefaultPortalId();
-        user.setDefaultPortalId(portalId.toUpperCase());
+        user.setDefaultPortalId(normPortal);
         user.setUpdatedAt(Instant.now());
         User saved = userRepository.save(user);
 
@@ -224,10 +248,11 @@ public class UserController {
                 saved.getId(),
                 "SUCCESS",
                 null, null, null,
-                "User changed preferred default portal to " + portalId.toUpperCase(),
-                prev, portalId.toUpperCase()
+                "User changed preferred default portal to " + normPortal,
+                prev, normPortal
         );
 
+        List<PortalAssignmentDto> refreshedAssignments = authService.getActivePortalAssignments(saved.getId());
         return ApiResponse.success("Preferred default portal updated successfully", UserDto.builder()
                 .id(saved.getId())
                 .identifier(saved.getIdentifier())
@@ -236,14 +261,15 @@ public class UserController {
                 .institutionId(saved.getInstitutionId())
                 .status(saved.getStatus())
                 .roles(roles)
-                .portalAssignments(assignments)
-                .allowedPortalIds(assignments.stream().map(PortalAssignmentDto::getPortalId).distinct().toList())
+                .portalAssignments(refreshedAssignments)
+                .allowedPortalIds(refreshedAssignments.stream().map(PortalAssignmentDto::getPortalId).distinct().toList())
                 .defaultPortalId(saved.getDefaultPortalId())
                 .build());
     }
 
     @PostMapping("/{id}/portal-assignments")
     @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
     @Operation(summary = "Assign a portal to a user (administrator only)")
     public ApiResponse<UserDto> assignPortalToUser(
             @PathVariable String id,
@@ -258,6 +284,11 @@ public class UserController {
         SecurityUtils.validateTenantAccess(user.getInstitutionId());
 
         String normPortal = portalId.trim().toUpperCase();
+
+        if (isDefault) {
+            userPortalAssignmentRepository.unsetAllDefaultsForUser(user.getId(), user.getInstitutionId());
+        }
+
         UserPortalAssignment assignment = userPortalAssignmentRepository
                 .findByUserIdAndPortalId(user.getId(), normPortal)
                 .orElseGet(() -> UserPortalAssignment.builder()
@@ -314,6 +345,7 @@ public class UserController {
 
     @DeleteMapping("/{id}/portal-assignments/{portalId}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
     @Operation(summary = "Revoke a portal assignment from a user with immediate effect")
     public ApiResponse<UserDto> revokePortalFromUser(
             @PathVariable String id,

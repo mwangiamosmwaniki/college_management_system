@@ -70,6 +70,7 @@ public class SecurityConfig {
                     "/api/v1/auth/reset-password",
                     "/api/v1/payments/mpesa/callback",
                     "/api/v1/documents/verify/**",
+                    "/api/v1/public/**",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
@@ -101,6 +102,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/payments/mpesa/callback").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/documents/verify/**").permitAll()
+                .requestMatchers("/api/v1/public/**").permitAll()
                 // All other business API endpoints require authentication
                 .requestMatchers("/api/v1/**").authenticated()
                 .anyRequest().permitAll()

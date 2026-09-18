@@ -23,18 +23,60 @@ export function PublicContactSection() {
     phone: '',
     department: 'ADMISSIONS',
     subject: '',
-    message: ''
+    message: '',
+    website: '' // Honeypot spam trap
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [ticketDetails, setTicketDetails] = useState<{ referenceNumber: string; assignedAt: string; department: string } | null>(null);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fullName || !formData.phone || !formData.message) return;
-    setSubmitted(true);
-    setTimeout(() => {
-      // Keep feedback visible
-    }, 4000);
+    if (!formData.fullName || !formData.phone || !formData.message) {
+      setSubmitError('Please complete all required fields.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch('/api/v1/public/inquiries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          department: formData.department,
+          subject: formData.subject.trim(),
+          message: formData.message.trim(),
+          website: formData.website // Honeypot trap
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to submit inquiry. Please verify your details.');
+      }
+
+      setTicketDetails({
+        referenceNumber: data.data?.referenceNumber || 'INQ-' + Date.now(),
+        assignedAt: data.data?.assignedAt || new Date().toISOString(),
+        department: data.data?.department || formData.department
+      });
+      setSubmitted(true);
+    } catch (err: any) {
+      console.error('Inquiry submission error:', err);
+      setSubmitError(err.message || 'Network error occurred while submitting your inquiry. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const faqs = [
@@ -199,31 +241,61 @@ export function PublicContactSection() {
             </div>
 
             {submitted ? (
-              <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3 text-center animate-in fade-in">
+              <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-4 text-center animate-in fade-in">
                 <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-                <h4 className="font-bold text-base text-emerald-900">Inquiry Received Successfully</h4>
-                <p className="text-xs text-emerald-700 max-w-md mx-auto">
-                  Thank you, <strong>{formData.fullName}</strong>. Your ticket has been assigned to the <strong>{formData.department}</strong> department. An admissions officer will contact you at <strong>{formData.phone}</strong> or <strong>{formData.email}</strong> within 24 hours.
+                <h4 className="font-bold text-base text-emerald-900">Inquiry Received & Logged in Registry</h4>
+                
+                <div className="inline-block bg-white px-4 py-2 rounded-xl border border-emerald-300 font-mono text-xs text-emerald-900 font-bold shadow-xs">
+                  Reference No: <span className="text-emerald-700">{ticketDetails?.referenceNumber}</span>
+                </div>
+
+                <p className="text-xs text-emerald-700 max-w-md mx-auto leading-relaxed">
+                  Thank you, <strong>{formData.fullName}</strong>. Your inquiry has been persisted and routed to the <strong>{ticketDetails?.department}</strong> department desk. An institutional liaison officer will reach you via <strong>{formData.phone}</strong> or <strong>{formData.email}</strong> within 24 hours.
                 </p>
-                <button
-                  onClick={() => {
-                    setSubmitted(false);
-                    setFormData({
-                      fullName: '',
-                      email: '',
-                      phone: '',
-                      department: 'ADMISSIONS',
-                      subject: '',
-                      message: ''
-                    });
-                  }}
-                  className="px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-semibold cursor-pointer"
-                >
-                  Send Another Message
-                </button>
+
+                <div className="pt-2">
+                  <button
+                    onClick={() => {
+                      setSubmitted(false);
+                      setTicketDetails(null);
+                      setSubmitError(null);
+                      setFormData({
+                        fullName: '',
+                        email: '',
+                        phone: '',
+                        department: 'ADMISSIONS',
+                        subject: '',
+                        message: '',
+                        website: ''
+                      });
+                    }}
+                    className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    Submit Another Inquiry
+                  </button>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+                {/* Honeypot trap field (hidden from genuine users) */}
+                <input
+                  type="text"
+                  name="website"
+                  value={formData.website}
+                  onChange={e => setFormData({ ...formData, website: e.target.value })}
+                  className="hidden"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                />
+
+                {submitError && (
+                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <span className="leading-tight">{submitError}</span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="font-semibold text-slate-700">Full Name *</label>
@@ -252,9 +324,10 @@ export function PublicContactSection() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="font-semibold text-slate-700">Email Address</label>
+                    <label className="font-semibold text-slate-700">Email Address *</label>
                     <input
                       type="email"
+                      required
                       value={formData.email}
                       onChange={e => setFormData({ ...formData, email: e.target.value })}
                       placeholder="e.g. kelvin@gmail.com"
@@ -305,10 +378,11 @@ export function PublicContactSection() {
 
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
-                  <span>Submit Inquiry</span>
+                  <span>{isSubmitting ? 'Verifying & Submitting...' : 'Submit Inquiry'}</span>
                 </button>
               </form>
             )}

@@ -12,7 +12,9 @@ import ke.college.management.common.ApiResponse;
 import ke.college.management.security.SecurityUtils;
 import ke.college.management.students.entity.Student;
 import ke.college.management.students.repository.StudentRepository;
+import ke.college.management.users.repository.UserPortalAssignmentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,12 +35,23 @@ public class LecturerController {
     private final CourseRepository courseRepository;
     private final StudentRepository studentRepository;
     private final CourseEnrollmentRepository courseEnrollmentRepository;
+    private final UserPortalAssignmentRepository userPortalAssignmentRepository;
+
+    private void validateLecturerAccess(String userId) {
+        boolean activeAssignment = userPortalAssignmentRepository
+                .findByUserIdAndPortalIdAndActiveTrue(userId, "LECTURER")
+                .isPresent();
+        if (!activeAssignment) {
+            throw new AccessDeniedException("Access Denied: You do not have an active assignment to the LECTURER portal.");
+        }
+    }
 
     @GetMapping("/me/courses")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get courses assigned to currently authenticated lecturer")
     public ApiResponse<List<Course>> getMyCourses() {
         String userId = SecurityUtils.getCurrentUserId();
+        validateLecturerAccess(userId);
         return ApiResponse.success(courseRepository.findByLecturerUserId(userId));
     }
 
@@ -47,6 +60,7 @@ public class LecturerController {
     @Operation(summary = "Get classes assigned to currently authenticated lecturer")
     public ApiResponse<List<LecturerClassDto>> getMyClasses() {
         String userId = SecurityUtils.getCurrentUserId();
+        validateLecturerAccess(userId);
         List<Course> courses = courseRepository.findByLecturerUserId(userId);
 
         List<LecturerClassDto> classes = new ArrayList<>();
@@ -74,6 +88,7 @@ public class LecturerController {
     @Operation(summary = "Get students under supervision of currently authenticated lecturer")
     public ApiResponse<List<LecturerStudentDto>> getMyStudents() {
         String userId = SecurityUtils.getCurrentUserId();
+        validateLecturerAccess(userId);
         String institutionId = SecurityUtils.getCurrentInstitutionId();
         List<Course> courses = courseRepository.findByLecturerUserId(userId);
 
@@ -121,6 +136,7 @@ public class LecturerController {
     @Operation(summary = "Get teaching workload summary for currently authenticated lecturer")
     public ApiResponse<Map<String, Object>> getMyWorkload() {
         String userId = SecurityUtils.getCurrentUserId();
+        validateLecturerAccess(userId);
         List<Course> courses = courseRepository.findByLecturerUserId(userId);
 
         int totalCreditHours = courses.stream().mapToInt(c -> c.getCreditHours() != null ? c.getCreditHours() : 3).sum();
@@ -137,6 +153,10 @@ public class LecturerController {
         workload.put("totalCreditHours", totalCreditHours);
         workload.put("totalStudents", (int) totalUniqueStudents);
         workload.put("assignedClasses", courses.size());
+        workload.put("supervisionCandidates", 0);
+        workload.put("committeeAssignmentsCount", 0);
+        workload.put("officeHoursWeekly", 4);
+        workload.put("teachingLoadStatus", totalCreditHours > 18 ? "OVERLOAD" : (totalCreditHours >= 12 ? "FULL" : "NORMAL"));
 
         return ApiResponse.success(workload);
     }
