@@ -20,9 +20,20 @@ import { INITIAL_PROCUREMENT_REQUISITIONS, INITIAL_STORE_INVENTORY } from '@/lib
 import { ProcurementRequisition, StoreInventoryItem } from '@/types/erp';
 
 export default function ProcurementPortalView() {
-  const { institutionalSettings, openInstitutionalDocument, currentUser } = useERP();
+  const { institutionalSettings, openInstitutionalDocument, currentUser, activeNavTab, setActiveNavTab } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'REQUISITIONS' | 'INVENTORY' | 'PURCHASE_ORDERS'>('REQUISITIONS');
+  const activeTab: 'REQUISITIONS' | 'INVENTORY' | 'PURCHASE_ORDERS' = 
+    activeNavTab === 'inventory' ? 'INVENTORY' :
+    activeNavTab === 'orders' ? 'PURCHASE_ORDERS' : 'REQUISITIONS';
+
+  const setActiveTab = (tab: 'REQUISITIONS' | 'INVENTORY' | 'PURCHASE_ORDERS') => {
+    const tabMap: Record<string, string> = {
+      INVENTORY: 'inventory',
+      PURCHASE_ORDERS: 'orders',
+      REQUISITIONS: 'requisitions'
+    };
+    setActiveNavTab(tabMap[tab] || 'requisitions');
+  };
   const [requisitions, setRequisitions] = useState<ProcurementRequisition[]>(INITIAL_PROCUREMENT_REQUISITIONS);
   const [inventory, setInventory] = useState<StoreInventoryItem[]>(INITIAL_STORE_INVENTORY);
 
@@ -117,20 +128,28 @@ export default function ProcurementPortalView() {
 
           <div className="flex items-center gap-1.5 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
             <button
-              onClick={() => setActiveTab('REQUISITIONS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              onClick={() => { setActiveTab('REQUISITIONS'); setActiveNavTab('dashboard'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'REQUISITIONS' ? 'bg-orange-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
               Requisitions Queue
             </button>
             <button
-              onClick={() => setActiveTab('INVENTORY')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              onClick={() => { setActiveTab('INVENTORY'); setActiveNavTab('inventory'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'INVENTORY' ? 'bg-orange-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
               Store Inventory
+            </button>
+            <button
+              onClick={() => { setActiveTab('PURCHASE_ORDERS'); setActiveNavTab('orders'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'PURCHASE_ORDERS' ? 'bg-orange-600 text-white' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Purchase Orders (LPO)
             </button>
           </div>
         </div>
@@ -258,6 +277,61 @@ export default function ProcurementPortalView() {
                             SUFFICIENT
                           </span>
                         )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: PURCHASE ORDERS (LPO) */}
+        {activeTab === 'PURCHASE_ORDERS' && (
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Local Purchase Orders (LPO Register)</h2>
+                <p className="text-xs text-slate-500">Official contracted purchase commitments generated for verified institutional requisitions.</p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 border-y border-slate-200 text-slate-600 font-bold uppercase">
+                    <th className="p-3">LPO Number</th>
+                    <th className="p-3">Requisition Ref</th>
+                    <th className="p-3">Target Department</th>
+                    <th className="p-3">Order Description</th>
+                    <th className="p-3">Total Value</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {requisitions.map(req => (
+                    <tr key={`lpo_${req.id}`} className="hover:bg-slate-50">
+                      <td className="p-3 font-mono font-bold text-orange-950">LPO/2026/{req.requisitionNumber.replace('REQ-', '')}</td>
+                      <td className="p-3 font-mono text-slate-600">{req.requisitionNumber}</td>
+                      <td className="p-3">{req.departmentName}</td>
+                      <td className="p-3 font-semibold text-slate-900">{req.title}</td>
+                      <td className="p-3 font-bold text-slate-900">KES {req.totalEstimatedCost.toLocaleString()}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded font-bold text-[11px] ${
+                          req.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {req.status === 'APPROVED' ? 'ISSUED TO VENDOR' : 'PENDING APPROVAL'}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => handlePrintLPO(req)}
+                          className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download Official LPO</span>
+                        </button>
                       </td>
                     </tr>
                   ))}

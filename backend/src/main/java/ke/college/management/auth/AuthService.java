@@ -51,7 +51,9 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -135,6 +137,9 @@ public class AuthService {
                     null
             );
 
+            List<PortalAssignmentDto> portalAssignments = computePortalAssignments(roles);
+            String authoritativeDefaultPortal = resolveAndValidateDefaultPortal(user, roles, portalAssignments);
+
             // Return AuthResponse WITHOUT exposing sessionId in response payload (HTTP-only cookie handles session)
             return AuthResponse.builder()
                     .userId(userDetails.getId())
@@ -144,8 +149,8 @@ public class AuthService {
                     .institutionId(userDetails.getInstitutionId())
                     .roles(roles)
                     .permissions(permissions)
-                    .portalAssignments(computePortalAssignments(roles))
-                    .defaultPortalId(computeDefaultPortalId(roles))
+                    .portalAssignments(portalAssignments)
+                    .defaultPortalId(authoritativeDefaultPortal)
                     .build();
 
         } catch (BadCredentialsException ex) {
@@ -241,6 +246,9 @@ public class AuthService {
                 .distinct()
                 .toList();
 
+        List<PortalAssignmentDto> portalAssignments = computePortalAssignments(roles);
+        String authoritativeDefaultPortal = resolveAndValidateDefaultPortal(user, roles, portalAssignments);
+
         return UserDto.builder()
                 .id(user.getId())
                 .identifier(user.getIdentifier())
@@ -252,24 +260,40 @@ public class AuthService {
                 .status(user.getStatus())
                 .roles(roles)
                 .permissions(permissions)
-                .portalAssignments(computePortalAssignments(roles))
-                .defaultPortalId(computeDefaultPortalId(roles))
+                .portalAssignments(portalAssignments)
+                .defaultPortalId(authoritativeDefaultPortal)
                 .build();
     }
 
-    public static String computeDefaultPortalId(List<String> roles) {
-        if (roles == null || roles.isEmpty()) {
-            return "STUDENT";
+    public String resolveAndValidateDefaultPortal(User user, List<String> roles, List<PortalAssignmentDto> assignments) {
+        if (assignments == null || assignments.isEmpty()) {
+            return null;
         }
-        if (roles.contains("ADMIN")) return "ADMIN";
-        if (roles.contains("DEAN")) return "EXAMINATIONS";
-        if (roles.contains("REGISTRAR")) return "REGISTRAR";
-        if (roles.contains("HR")) return "HR";
-        if (roles.contains("FINANCE")) return "FINANCE";
-        if (roles.contains("LECTURER")) return "LECTURER";
-        if (roles.contains("STUDENT")) return "STUDENT";
-        if (roles.contains("APPLICANT")) return "APPLICANT";
-        return "STUDENT";
+
+        Set<String> authorizedPortalIds = assignments.stream()
+                .map(PortalAssignmentDto::getPortalId)
+                .collect(Collectors.toSet());
+
+        // 1. Explicitly persisted domain-level default portal on User entity
+        if (user != null && user.getDefaultPortalId() != null && !user.getDefaultPortalId().isBlank()) {
+            String persisted = user.getDefaultPortalId().trim().toUpperCase();
+            if (authorizedPortalIds.contains(persisted)) {
+                return persisted;
+            }
+            // If the persisted default is NOT in authorized portals, repair it:
+            // Do NOT blindly default to STUDENT. Select authoritatively from actual authorized assignments.
+        }
+
+        // 2. Authoritative selection: first authorized assignment
+        String fallbackAuthorized = assignments.get(0).getPortalId();
+
+        // 3. Persist the repair or initial assignment if user entity is available
+        if (user != null && (user.getDefaultPortalId() == null || !authorizedPortalIds.contains(user.getDefaultPortalId()))) {
+            user.setDefaultPortalId(fallbackAuthorized);
+            userRepository.save(user);
+        }
+
+        return fallbackAuthorized;
     }
 
     public static List<PortalAssignmentDto> computePortalAssignments(List<String> roles) {

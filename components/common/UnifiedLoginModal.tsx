@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useERP } from '@/context/erp-context';
 import { PortalId, UserIdentity } from '@/types/erp';
+import { resolveUserDestinationPortal } from '@/lib/portal-routing';
 import {
   Building2,
   Lock,
@@ -127,28 +128,9 @@ export function UnifiedLoginModal() {
       };
 
       // Authoritative Automatic Portal Routing:
-      // 1. If a loginTargetPortal was requested as a routing hint AND is assigned to user, use it.
-      // 2. Otherwise use the backend-authoritative defaultPortalId.
-      // 3. Otherwise use the first assigned portal.
-      // 4. Never render a workspace selector.
-      const assignedPortalIds = authoritativeUser.portalAssignments.map(a => a.portalId);
-      let targetPortal: PortalId = 'STUDENT';
-      if (
-        loginTargetPortal &&
-        loginTargetPortal !== 'STAFF' &&
-        assignedPortalIds.includes(loginTargetPortal as PortalId)
-      ) {
-        targetPortal = loginTargetPortal as PortalId;
-      } else if (
-        authoritativeUser.defaultPortalId &&
-        assignedPortalIds.includes(authoritativeUser.defaultPortalId)
-      ) {
-        targetPortal = authoritativeUser.defaultPortalId;
-      } else if (assignedPortalIds.length > 0) {
-        targetPortal = assignedPortalIds[0];
-      }
-
-      loginUser(authoritativeUser, targetPortal);
+      // Uses centralized resolver: validates target hint, defaultPortalId, or first authorized assignment.
+      const destination = resolveUserDestinationPortal(authoritativeUser, loginTargetPortal);
+      loginUser(authoritativeUser, destination.portalId);
       handleClose();
     } catch {
       // Backend unavailable or network error: STRICTLY show standard failure message, NEVER authenticate locally

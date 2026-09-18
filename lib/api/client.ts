@@ -47,6 +47,9 @@ export async function apiClient<T>(
     }
 
     if (!response.ok || !data.success) {
+      if (response.status === 401 && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('session-expired'));
+      }
       throw new Error(data.message || `API request failed with status ${response.status}`);
     }
 

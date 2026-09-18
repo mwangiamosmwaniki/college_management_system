@@ -56,6 +56,8 @@ import {
   createAuditLog
 } from '@/lib/rbac-engine';
 
+import { resolveUserDestinationPortal } from '@/lib/portal-routing';
+
 import {
   INITIAL_CRUD_ENTITIES,
   evaluateCrudPermission,
@@ -342,15 +344,9 @@ export function ERPProvider({ children }: { children: ReactNode }) {
             };
             setCurrentUser(restoredUser);
 
-            // Automatically restore the default authorized portal
-            const assignedIds = restoredUser.portalAssignments.map(a => a.portalId);
-            let portalToActivate: PortalId = 'STUDENT';
-            if (restoredUser.defaultPortalId && assignedIds.includes(restoredUser.defaultPortalId)) {
-              portalToActivate = restoredUser.defaultPortalId;
-            } else if (assignedIds.length > 0) {
-              portalToActivate = assignedIds[0];
-            }
-            setActivePortalId(portalToActivate);
+            // Authoritative default/assigned portal resolution
+            const destination = resolveUserDestinationPortal(restoredUser, null, roles);
+            setActivePortalId(destination.portalId);
           }
         }
       } catch {
@@ -385,7 +381,40 @@ export function ERPProvider({ children }: { children: ReactNode }) {
     setCurrentUser(DEFAULT_GUEST_USER);
     setActivePortalId('PUBLIC');
     setIsMobileSidebarOpen(false);
+    // Invalidate all scoped state to prevent any stale data persistence
+    setStudentProfile(EMPTY_STUDENT_PROFILE);
+    setStudentCourses([]);
+    setStudentInvoices([]);
+    setStudentRequests([]);
+    setClearanceItems([]);
+    setLmsCourses([]);
+    setLibraryLoans([]);
+    setLibraryReservations([]);
+    setNotifications([]);
   };
+
+  // Listen for session expiration events emitted by API client
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setCurrentUser(DEFAULT_GUEST_USER);
+      setActivePortalId('PUBLIC');
+      setStudentProfile(EMPTY_STUDENT_PROFILE);
+      setStudentCourses([]);
+      setStudentInvoices([]);
+      setStudentRequests([]);
+      setClearanceItems([]);
+      setLmsCourses([]);
+      setLibraryLoans([]);
+      setLibraryReservations([]);
+      setNotifications([]);
+      setIsLoginModalOpen(true);
+    };
+
+    window.addEventListener('session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('session-expired', handleSessionExpired);
+    };
+  }, []);
 
   // Domain data - Real server-authorized portal states
   const [studentProfile, setStudentProfile] = useState<StudentProfileData>(EMPTY_STUDENT_PROFILE);
@@ -774,20 +803,8 @@ export function ERPProvider({ children }: { children: ReactNode }) {
     setIsLoginModalOpen(false);
     setIsMobileSidebarOpen(false);
 
-    let resolvedPortal: PortalId =
-      (targetPortal && targetPortal !== 'STAFF' ? targetPortal : null) ||
-      user.defaultPortalId ||
-      user.portalAssignments[0]?.portalId ||
-      'PUBLIC';
-
-    // Verify user has access to target, fallback to first allowed
-    const checkTarget = evaluatePortalAccess(user, resolvedPortal, roles);
-    if (!checkTarget.allowed) {
-      const firstAllowed = user.portalAssignments.find(
-        (a) => evaluatePortalAccess(user, a.portalId, roles).allowed
-      );
-      resolvedPortal = firstAllowed ? firstAllowed.portalId : (user.portalAssignments[0]?.portalId || 'PUBLIC');
-    }
+    const destination = resolveUserDestinationPortal(user, targetPortal, roles);
+    const resolvedPortal = destination.portalId;
 
     setActivePortalId(resolvedPortal);
     setActiveNavTab(defaultTab);

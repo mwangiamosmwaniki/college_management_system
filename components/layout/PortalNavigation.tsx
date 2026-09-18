@@ -26,7 +26,9 @@ import {
   Library,
   Briefcase,
   Layers,
-  GraduationCap
+  GraduationCap,
+  UserPlus,
+  Search
 } from 'lucide-react';
 
 interface NavItem {
@@ -103,6 +105,12 @@ export function PortalNavigation() {
           { id: 'profile', label: 'Admissions Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
+      case 'APPLICANT':
+        return [
+          { id: 'apply', label: 'New Application', icon: <UserPlus className="w-4 h-4" />, section: 'Admissions' },
+          { id: 'status', label: 'Track Status', icon: <Search className="w-4 h-4" />, section: 'Admissions' }
+        ];
+
       case 'HR':
         return [
           { id: 'dashboard', label: 'HR Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, section: 'General' },
@@ -114,25 +122,31 @@ export function PortalNavigation() {
 
       case 'ELEARNING':
         return [
-          { id: 'dashboard', label: 'Course Catalog', icon: <BookOpen className="w-4 h-4" />, section: 'Academics' },
-          { id: 'modules', label: 'Weekly Modules', icon: <Layers className="w-4 h-4" />, section: 'Learning' },
-          { id: 'discussions', label: 'Class Discussions', icon: <Users className="w-4 h-4" />, section: 'Learning' },
+          { id: 'dashboard', label: 'Course Catalog & Modules', icon: <BookOpen className="w-4 h-4" />, section: 'Academics' },
+          { id: 'assignments', label: 'Assignment Dropbox', icon: <FileText className="w-4 h-4" />, section: 'Assessment' },
+          { id: 'grading', label: 'Grading & Rubrics', icon: <Award className="w-4 h-4" />, section: 'Assessment' },
+          { id: 'quizzes', label: 'CBT Quizzes', icon: <FileSpreadsheet className="w-4 h-4" />, section: 'Assessment' },
+          { id: 'analytics', label: 'Trainee Analytics', icon: <Users className="w-4 h-4" />, section: 'Analytics' },
           { id: 'profile', label: 'Learning Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
       case 'ELIBRARY':
         return [
           { id: 'dashboard', label: 'Catalog Search', icon: <Library className="w-4 h-4" />, section: 'Collection' },
+          { id: 'catalog', label: 'Browse Repositories', icon: <FolderOpen className="w-4 h-4" />, section: 'Collection' },
           { id: 'loans', label: 'Active Loans', icon: <BookOpen className="w-4 h-4" />, section: 'Services' },
-          { id: 'digital', label: 'Digital Journals', icon: <FolderOpen className="w-4 h-4" />, section: 'Services' },
+          { id: 'digital_drm', label: 'Digital Journals & DRM', icon: <FolderOpen className="w-4 h-4" />, section: 'Services' },
+          { id: 'reservations', label: 'Book Reservations', icon: <CheckCircle2 className="w-4 h-4" />, section: 'Services' },
+          { id: 'policies', label: 'Circulation Policies', icon: <FileText className="w-4 h-4" />, section: 'Policies' },
           { id: 'profile', label: 'Patron Account', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
       case 'EXAMINATIONS':
         return [
-          { id: 'dashboard', label: 'Senate Moderation', icon: <Award className="w-4 h-4" />, section: 'Examinations' },
+          { id: 'dashboard', label: 'Exam Overview', icon: <Award className="w-4 h-4" />, section: 'Examinations' },
+          { id: 'marks_entry', label: 'Marks Entry & Upload', icon: <FileSpreadsheet className="w-4 h-4" />, section: 'Examinations' },
           { id: 'moderation', label: 'Marks Verification', icon: <CheckCircle2 className="w-4 h-4" />, section: 'Examinations' },
-          { id: 'gazette', label: 'Graduation Gazette', icon: <FileSpreadsheet className="w-4 h-4" />, section: 'Examinations' },
+          { id: 'approvals', label: 'Senate Moderation & Gazette', icon: <Award className="w-4 h-4" />, section: 'Senate' },
           { id: 'profile', label: 'Examiner Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
@@ -140,8 +154,53 @@ export function PortalNavigation() {
         return [
           { id: 'dashboard', label: 'Halls of Residence', icon: <Building2 className="w-4 h-4" />, section: 'Accommodation' },
           { id: 'allocation', label: 'Bed Allocation', icon: <Users className="w-4 h-4" />, section: 'Accommodation' },
+          { id: 'residents', label: 'Resident Register', icon: <CheckCircle2 className="w-4 h-4" />, section: 'Accommodation' },
           { id: 'maintenance', label: 'Maintenance Requests', icon: <HelpCircle className="w-4 h-4" />, section: 'Services' },
+          { id: 'clearance', label: 'Hostel Clearance', icon: <FileCheck className="w-4 h-4" />, section: 'Services' },
           { id: 'profile', label: 'Warden Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
+        ];
+
+      case 'HOD':
+        return [
+          { id: 'dashboard', label: 'Department Curricula', icon: <BookOpen className="w-4 h-4" />, section: 'Curriculum' },
+          { id: 'allocations', label: 'Lecturer Allocations', icon: <Users className="w-4 h-4" />, section: 'Faculty' },
+          { id: 'moderation', label: 'Marks Moderation', icon: <CheckCircle2 className="w-4 h-4" />, section: 'Assessment' },
+          { id: 'timetable', label: 'Workshop Timetable', icon: <Clock className="w-4 h-4" />, section: 'Operations' },
+          { id: 'profile', label: 'HOD Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
+        ];
+
+      case 'REGISTRAR':
+        return [
+          { id: 'dashboard', label: 'Student Registry', icon: <Users className="w-4 h-4" />, section: 'Students' },
+          { id: 'handover', label: 'Admissions Handover', icon: <FileCheck className="w-4 h-4" />, section: 'Admissions' },
+          { id: 'calendar', label: 'Academic Calendar', icon: <Calendar className="w-4 h-4" />, section: 'Schedules' },
+          { id: 'transcripts', label: 'Official Transcripts', icon: <Award className="w-4 h-4" />, section: 'Records' },
+          { id: 'profile', label: 'Registrar Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
+        ];
+
+      case 'ATTACHMENT':
+        return [
+          { id: 'dashboard', label: 'Attachment Overview', icon: <LayoutDashboard className="w-4 h-4" />, section: 'General' },
+          { id: 'placements', label: 'Industry Placements', icon: <Briefcase className="w-4 h-4" />, section: 'Placements' },
+          { id: 'logbooks', label: 'Logbook Monitoring', icon: <FileText className="w-4 h-4" />, section: 'Assessments' },
+          { id: 'profile', label: 'Liaison Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
+        ];
+
+      case 'PROCUREMENT':
+        return [
+          { id: 'dashboard', label: 'Requisitions Queue', icon: <FileText className="w-4 h-4" />, section: 'Purchasing' },
+          { id: 'inventory', label: 'Store Inventory', icon: <Layers className="w-4 h-4" />, section: 'Supplies' },
+          { id: 'orders', label: 'Purchase Orders', icon: <Receipt className="w-4 h-4" />, section: 'Finance' },
+          { id: 'profile', label: 'Procurement Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
+        ];
+
+      case 'PRINCIPAL':
+        return [
+          { id: 'dashboard', label: 'Executive Cockpit', icon: <LayoutDashboard className="w-4 h-4" />, section: 'Governance' },
+          { id: 'financials', label: 'Fiscal Health & HELB', icon: <CreditCard className="w-4 h-4" />, section: 'Finance' },
+          { id: 'academics', label: 'Academic KPIs & TVETA', icon: <Award className="w-4 h-4" />, section: 'Quality' },
+          { id: 'governance', label: 'Statutory Compliance', icon: <Briefcase className="w-4 h-4" />, section: 'Governance' },
+          { id: 'profile', label: 'Principal Profile', icon: <User className="w-4 h-4" />, section: 'Account' }
         ];
 
       case 'ADMIN':

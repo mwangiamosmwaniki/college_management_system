@@ -20,27 +20,40 @@ import { INITIAL_ATTACHMENT_PLACEMENTS } from '@/lib/kenyan-tvet-data';
 import { AttachmentPlacement } from '@/types/erp';
 
 export default function AttachmentPortalView() {
-  const { institutionalSettings, openInstitutionalDocument } = useERP();
+  const { institutionalSettings, openInstitutionalDocument, activeNavTab, setActiveNavTab } = useERP();
+
+  const activeTab: 'PLACEMENTS' | 'LOGBOOKS' = activeNavTab === 'logbooks' ? 'LOGBOOKS' : 'PLACEMENTS';
+  const setActiveTab = (tab: 'PLACEMENTS' | 'LOGBOOKS') => {
+    setActiveNavTab(tab === 'LOGBOOKS' ? 'logbooks' : 'placements');
+  };
 
   const [placements, setPlacements] = useState<AttachmentPlacement[]>(INITIAL_ATTACHMENT_PLACEMENTS);
   const [selectedPlacement, setSelectedPlacement] = useState<AttachmentPlacement>(INITIAL_ATTACHMENT_PLACEMENTS[0]);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
-  const handleUpdateLogbook = (placementId: string, verifiedWeeks: number, score?: number) => {
+  const handleUpdateLogbook = (placementId: string, verifiedWeeks: number, score?: number, showFeedback = false) => {
     setPlacements(prev =>
       prev.map(p => {
         if (p.id === placementId) {
           const total = p.totalWeeks || 12;
-          return {
+          const updated = {
             ...p,
             verifiedWeeks,
             assessorScore: score !== undefined ? score : p.assessorScore,
-            status: verifiedWeeks >= total ? 'COMPLETED' : 'IN_PROGRESS'
+            status: (verifiedWeeks >= total ? 'COMPLETED' : 'IN_PROGRESS') as AttachmentPlacement['status']
           };
+          if (selectedPlacement.id === placementId) {
+            setSelectedPlacement(updated);
+          }
+          return updated;
         }
         return p;
       })
     );
-    alert('Industrial Attachment logbook progress updated successfully.');
+    if (showFeedback) {
+      setFeedbackMessage('Industrial Attachment logbook progress updated successfully.');
+      setTimeout(() => setFeedbackMessage(null), 3000);
+    }
   };
 
   const handlePrintAttachmentLetter = (p: AttachmentPlacement) => {
@@ -84,6 +97,25 @@ export default function AttachmentPortalView() {
                 12-Week Mandatory Industry Placements, Logbooks & Site Assessments
               </p>
             </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+            <button
+              onClick={() => { setActiveTab('PLACEMENTS'); setActiveNavTab('placements'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'PLACEMENTS' ? 'bg-amber-600 text-white' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Industry Placements
+            </button>
+            <button
+              onClick={() => { setActiveTab('LOGBOOKS'); setActiveNavTab('logbooks'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'LOGBOOKS' ? 'bg-amber-600 text-white' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Logbook Monitoring & Scoring
+            </button>
           </div>
         </div>
       </div>
@@ -175,6 +207,14 @@ export default function AttachmentPortalView() {
                 <div><strong>Period:</strong> {selectedPlacement.startDate} to {selectedPlacement.endDate}</div>
               </div>
 
+              {/* Feedback Alert */}
+              {feedbackMessage && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{feedbackMessage}</span>
+                </div>
+              )}
+
               {/* Logbook Progress Updater */}
               <div className="space-y-2">
                 <label className="block font-bold text-slate-800">Verified Weekly Logbook Entries</label>
@@ -204,8 +244,8 @@ export default function AttachmentPortalView() {
                     className="p-2 border border-slate-300 rounded-lg w-24 text-xs font-bold"
                   />
                   <button
-                    onClick={() => handleUpdateLogbook(selectedPlacement.id, selectedPlacement.verifiedWeeks || 0, selectedPlacement.assessorScore || 85)}
-                    className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs"
+                    onClick={() => handleUpdateLogbook(selectedPlacement.id, selectedPlacement.verifiedWeeks || 0, selectedPlacement.assessorScore || 85, true)}
+                    className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs cursor-pointer"
                   >
                     Save Score
                   </button>

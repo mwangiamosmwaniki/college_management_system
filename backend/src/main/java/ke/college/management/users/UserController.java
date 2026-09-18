@@ -4,9 +4,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ke.college.management.audit.AuditService;
 import ke.college.management.auth.AuthService;
+import ke.college.management.auth.dto.PortalAssignmentDto;
 import ke.college.management.auth.dto.UserDto;
 import ke.college.management.common.ApiResponse;
 import ke.college.management.common.PageResponse;
+import ke.college.management.exceptions.BadRequestException;
 import ke.college.management.exceptions.ResourceNotFoundException;
 import ke.college.management.exceptions.UnauthorizedException;
 import ke.college.management.security.CustomUserDetails;
@@ -36,6 +38,7 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final AuditService auditService;
+    private final AuthService authService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('USER_VIEW') or hasRole('ADMIN')")
@@ -52,7 +55,11 @@ public class UserController {
                 ? userRepository.searchUsers(institutionId, search.trim(), pageRequest)
                 : userRepository.findByInstitutionId(institutionId, pageRequest);
 
-        Page<UserDto> dtoPage = userPage.map(u -> UserDto.builder()
+        Page<UserDto> dtoPage = userPage.map(u -> {
+            List<String> roles = u.getRoles().stream().map(r -> r.getCode()).toList();
+            List<PortalAssignmentDto> assignments = AuthService.computePortalAssignments(roles);
+            String defaultPortal = authService.resolveAndValidateDefaultPortal(u, roles, assignments);
+            return UserDto.builder()
                 .id(u.getId())
                 .identifier(u.getIdentifier())
                 .email(u.getEmail())
@@ -61,10 +68,12 @@ public class UserController {
                 .departmentId(u.getDepartmentId())
                 .campusId(u.getCampusId())
                 .status(u.getStatus())
-                .roles(u.getRoles().stream().map(r -> r.getCode()).toList())
+                .roles(roles)
                 .permissions(u.getRoles().stream().flatMap(r -> r.getPermissions().stream()).map(p -> p.getCode()).distinct().toList())
-                .portalAssignments(AuthService.computePortalAssignments(u.getRoles().stream().map(r -> r.getCode()).toList()))
-                .build());
+                .portalAssignments(assignments)
+                .defaultPortalId(defaultPortal)
+                .build();
+        });
 
         return ApiResponse.success(PageResponse.from(dtoPage));
     }
@@ -108,6 +117,108 @@ public class UserController {
                 .institutionId(saved.getInstitutionId())
                 .status(saved.getStatus())
                 .roles(saved.getRoles().stream().map(r -> r.getCode()).toList())
+                .build());
+    }
+
+    @PutMapping("/{id}/default-portal")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update user default portal (authorized administrator only)")
+    public ApiResponse<UserDto> updateUserDefaultPortal(
+            @PathVariable String id,
+            @RequestParam String portalId
+    ) {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        SecurityUtils.validateTenantAccess(user.getInstitutionId());
+
+        List<String> roles = user.getRoles().stream().map(r -> r.getCode()).toList();
+        List<PortalAssignmentDto> assignments = AuthService.computePortalAssignments(roles);
+        boolean isAuthorized = assignments.stream()
+                .anyMatch(a -> a.getPortalId().equalsIgnoreCase(portalId));
+
+        if (!isAuthorized) {
+            throw new BadRequestException("Requested default portal is not among user's authorized portal assignments");
+        }
+
+        String prev = user.getDefaultPortalId();
+        user.setDefaultPortalId(portalId.toUpperCase());
+        user.setUpdatedAt(Instant.now());
+        User saved = userRepository.save(user);
+
+        auditService.recordEvent(
+                institutionId,
+                SecurityUtils.getCurrentUserId(),
+                SecurityUtils.getCurrentUserDetails().getIdentifier(),
+                "USER_DEFAULT_PORTAL_CHANGE",
+                "USER",
+                saved.getId(),
+                "SUCCESS",
+                null, null, null,
+                "Changed default portal of " + saved.getEmail() + " to " + portalId.toUpperCase(),
+                prev, portalId.toUpperCase()
+        );
+
+        return ApiResponse.success("Default portal updated successfully", UserDto.builder()
+                .id(saved.getId())
+                .identifier(saved.getIdentifier())
+                .email(saved.getEmail())
+                .fullName(saved.getFullName())
+                .institutionId(saved.getInstitutionId())
+                .status(saved.getStatus())
+                .roles(roles)
+                .portalAssignments(assignments)
+                .defaultPortalId(saved.getDefaultPortalId())
+                .build());
+    }
+
+    @PutMapping("/me/default-portal")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Update authenticated user's own preferred default portal")
+    public ApiResponse<UserDto> updateMyDefaultPortal(@RequestParam String portalId) {
+        String institutionId = SecurityUtils.getCurrentInstitutionId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<String> roles = user.getRoles().stream().map(r -> r.getCode()).toList();
+        List<PortalAssignmentDto> assignments = AuthService.computePortalAssignments(roles);
+        boolean isAuthorized = assignments.stream()
+                .anyMatch(a -> a.getPortalId().equalsIgnoreCase(portalId));
+
+        if (!isAuthorized) {
+            throw new BadRequestException("Requested default portal is not among your authorized portal assignments");
+        }
+
+        String prev = user.getDefaultPortalId();
+        user.setDefaultPortalId(portalId.toUpperCase());
+        user.setUpdatedAt(Instant.now());
+        User saved = userRepository.save(user);
+
+        auditService.recordEvent(
+                institutionId,
+                currentUserId,
+                user.getIdentifier(),
+                "USER_SELF_DEFAULT_PORTAL_CHANGE",
+                "USER",
+                saved.getId(),
+                "SUCCESS",
+                null, null, null,
+                "User changed preferred default portal to " + portalId.toUpperCase(),
+                prev, portalId.toUpperCase()
+        );
+
+        return ApiResponse.success("Preferred default portal updated successfully", UserDto.builder()
+                .id(saved.getId())
+                .identifier(saved.getIdentifier())
+                .email(saved.getEmail())
+                .fullName(saved.getFullName())
+                .institutionId(saved.getInstitutionId())
+                .status(saved.getStatus())
+                .roles(roles)
+                .portalAssignments(assignments)
+                .defaultPortalId(saved.getDefaultPortalId())
                 .build());
     }
 }

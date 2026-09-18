@@ -28,9 +28,14 @@ import { ApplicantMasterRecord, KenyanQualificationLevel } from '@/types/erp';
 import { KENYAN_PUBLIC_PROGRAMMES, INITIAL_APPLICANTS_DATA } from '@/lib/kenyan-tvet-data';
 
 export default function ApplicantPortalView() {
-  const { institutionalSettings, openInstitutionalDocument, navigateToPortal } = useERP();
+  const { institutionalSettings, openInstitutionalDocument, navigateToPortal, activeNavTab, setActiveNavTab } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'NEW_APPLICATION' | 'TRACK_STATUS'>('NEW_APPLICATION');
+  const activeTab: 'NEW_APPLICATION' | 'TRACK_STATUS' = 
+    activeNavTab === 'status' || activeNavTab === 'track' ? 'TRACK_STATUS' : 'NEW_APPLICATION';
+
+  const setActiveTab = (tab: 'NEW_APPLICATION' | 'TRACK_STATUS') => {
+    setActiveNavTab(tab === 'TRACK_STATUS' ? 'status' : 'apply');
+  };
 
   // Application Step Wizard
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -79,6 +84,7 @@ export default function ApplicantPortalView() {
 
   // Tracking State
   const [searchRef, setSearchRef] = useState('');
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [trackedApplication, setTrackedApplication] = useState<ApplicantMasterRecord | null>(INITIAL_APPLICANTS_DATA[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState<ApplicantMasterRecord | null>(null);
@@ -180,7 +186,12 @@ export default function ApplicantPortalView() {
 
   const handleTrackSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setSearchError(null);
     const query = searchRef.trim().toLowerCase();
+    if (!query) {
+      setSearchError('Please enter an application reference, KCSE index number, or national ID.');
+      return;
+    }
     const found = INITIAL_APPLICANTS_DATA.find(
       a => a.applicationNumber.toLowerCase() === query ||
            (a.kcseIndexNumber && a.kcseIndexNumber.toLowerCase() === query) ||
@@ -189,7 +200,8 @@ export default function ApplicantPortalView() {
     if (found) {
       setTrackedApplication(found);
     } else {
-      alert(`No application found for '${searchRef}'. Try searching with sample reference 'APP-2026-0819' or 'APP-2026-0820'.`);
+      setTrackedApplication(null);
+      setSearchError(`No application found for '${searchRef}'. Try searching with sample reference 'APP-2026-0819' or 'APP-2026-0820'.`);
     }
   };
 
@@ -215,8 +227,8 @@ export default function ApplicantPortalView() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setActiveTab('NEW_APPLICATION')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
+              onClick={() => { setActiveTab('NEW_APPLICATION'); setActiveNavTab('apply'); }}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                 activeTab === 'NEW_APPLICATION'
                   ? 'bg-white text-emerald-900 shadow'
                   : 'bg-emerald-800 text-emerald-100 hover:bg-emerald-700'
@@ -225,8 +237,8 @@ export default function ApplicantPortalView() {
               New Application
             </button>
             <button
-              onClick={() => setActiveTab('TRACK_STATUS')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
+              onClick={() => { setActiveTab('TRACK_STATUS'); setActiveNavTab('status'); }}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                 activeTab === 'TRACK_STATUS'
                   ? 'bg-white text-emerald-900 shadow'
                   : 'bg-emerald-800 text-emerald-100 hover:bg-emerald-700'
@@ -860,11 +872,18 @@ export default function ApplicantPortalView() {
                 </div>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer"
                 >
                   Search
                 </button>
               </form>
+
+              {searchError && (
+                <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>{searchError}</span>
+                </div>
+              )}
             </div>
 
             {trackedApplication && (

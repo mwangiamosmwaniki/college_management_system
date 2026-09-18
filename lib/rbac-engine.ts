@@ -39,12 +39,14 @@ export function evaluatePortalAccess(
   portalId: PortalId,
   rolesRegistry: RoleDefinition[]
 ): { allowed: boolean; roleName?: string; assignment?: PortalAssignment; reason: string } {
-  // Public Portal is accessible to everyone
-  if (portalId === 'PUBLIC') {
+  // Public Portal and Applicant Admissions Portal are accessible to everyone / prospective trainees
+  if (portalId === 'PUBLIC' || portalId === 'APPLICANT') {
     return {
       allowed: true,
-      roleName: 'Public Visitor',
-      reason: 'Public website and prospectus portal is openly accessible to all.'
+      roleName: portalId === 'PUBLIC' ? 'Public Visitor' : 'Prospective Applicant',
+      reason: portalId === 'PUBLIC'
+        ? 'Public website and prospectus portal is openly accessible to all.'
+        : 'Applicant admissions and tracking portal is openly accessible to prospective trainees.'
     };
   }
 

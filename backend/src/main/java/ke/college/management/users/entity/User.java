@@ -55,6 +55,9 @@ public class User {
     @Builder.Default
     private String status = "ACTIVE";
 
+    @Column(name = "default_portal_id", length = 32)
+    private String defaultPortalId;
+
     @Column(name = "failed_login_attempts")
     @Builder.Default
     private Integer failedLoginAttempts = 0;

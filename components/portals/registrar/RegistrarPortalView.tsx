@@ -28,9 +28,22 @@ import {
 import { StudentMasterRecord, ApplicantMasterRecord } from '@/types/erp';
 
 export default function RegistrarPortalView() {
-  const { institutionalSettings, openInstitutionalDocument, currentUser } = useERP();
+  const { institutionalSettings, openInstitutionalDocument, currentUser, activeNavTab, setActiveNavTab } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'STUDENT_REGISTRY' | 'ADMISSION_HANDOVER' | 'ACADEMIC_CALENDAR' | 'TRANSCRIPTS'>('STUDENT_REGISTRY');
+  const activeTab: 'STUDENT_REGISTRY' | 'ADMISSION_HANDOVER' | 'ACADEMIC_CALENDAR' | 'TRANSCRIPTS' = 
+    activeNavTab === 'handover' ? 'ADMISSION_HANDOVER' :
+    activeNavTab === 'calendar' ? 'ACADEMIC_CALENDAR' :
+    activeNavTab === 'transcripts' ? 'TRANSCRIPTS' : 'STUDENT_REGISTRY';
+
+  const setActiveTab = (tab: 'STUDENT_REGISTRY' | 'ADMISSION_HANDOVER' | 'ACADEMIC_CALENDAR' | 'TRANSCRIPTS') => {
+    const tabMap: Record<string, string> = {
+      ADMISSION_HANDOVER: 'handover',
+      ACADEMIC_CALENDAR: 'calendar',
+      TRANSCRIPTS: 'transcripts',
+      STUDENT_REGISTRY: 'registry'
+    };
+    setActiveNavTab(tabMap[tab] || 'registry');
+  };
 
   const [students, setStudents] = useState<StudentMasterRecord[]>(INITIAL_STUDENT_MASTER_RECORDS);
   const [applicants, setApplicants] = useState<ApplicantMasterRecord[]>(INITIAL_APPLICANTS_DATA);
@@ -38,6 +51,7 @@ export default function RegistrarPortalView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterDept, setFilterDept] = useState<string>('ALL');
+  const [matriculationNotice, setMatriculationNotice] = useState<{ name: string; admNo: string } | null>(null);
 
   const filteredStudents = students.filter(stu => {
     const matchSearch =
@@ -84,8 +98,7 @@ export default function RegistrarPortalView() {
 
     setStudents(prev => [newStudent, ...prev]);
     setApplicants(prev => prev.map(a => a.id === app.id ? { ...a, status: 'ADMITTED' } : a));
-
-    alert(`Applicant ${app.fullName} matriculated successfully with Admission Number: ${newAdmNo}`);
+    setMatriculationNotice({ name: app.fullName, admNo: newAdmNo });
   };
 
   const handleUpdateStudentStatus = (studentId: string, newStatus: StudentMasterRecord['academicStatus']) => {
@@ -140,28 +153,36 @@ export default function RegistrarPortalView() {
 
           <div className="flex items-center gap-1.5 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
             <button
-              onClick={() => setActiveTab('STUDENT_REGISTRY')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              onClick={() => { setActiveTab('STUDENT_REGISTRY'); setActiveNavTab('dashboard'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'STUDENT_REGISTRY' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
               Trainee Master Registry
             </button>
             <button
-              onClick={() => setActiveTab('ADMISSION_HANDOVER')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              onClick={() => { setActiveTab('ADMISSION_HANDOVER'); setActiveNavTab('handover'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'ADMISSION_HANDOVER' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
               Matriculation Handover
             </button>
             <button
-              onClick={() => setActiveTab('ACADEMIC_CALENDAR')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              onClick={() => { setActiveTab('ACADEMIC_CALENDAR'); setActiveNavTab('calendar'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'ACADEMIC_CALENDAR' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
               Academic Calendar
+            </button>
+            <button
+              onClick={() => { setActiveTab('TRANSCRIPTS'); setActiveNavTab('transcripts'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'TRANSCRIPTS' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Official Transcripts
             </button>
           </div>
         </div>
@@ -299,6 +320,24 @@ export default function RegistrarPortalView() {
               </p>
             </div>
 
+            {matriculationNotice && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="font-bold">Applicant Matriculated Successfully:</span> {matriculationNotice.name} has been enrolled with Admission Number{' '}
+                    <span className="font-mono font-bold text-emerald-800">{matriculationNotice.admNo}</span>.
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMatriculationNotice(null)}
+                  className="text-emerald-700 hover:text-emerald-900 font-bold text-xs cursor-pointer ml-4"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
@@ -378,6 +417,63 @@ export default function RegistrarPortalView() {
                 <div className="text-amber-800">Reporting Date: 7th September 2026</div>
                 <div className="text-amber-800">Annual Graduation Ceremony: 4th December 2026</div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: OFFICIAL CERTIFIED TRANSCRIPTS */}
+        {activeTab === 'TRANSCRIPTS' && (
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Official Certified Transcripts & Records</h2>
+                <p className="text-xs text-slate-500">
+                  Generate official TVETA/KNEC compliant signed academic transcripts for matriculated trainees.
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 border-y border-slate-200 text-slate-600 font-bold uppercase">
+                    <th className="p-3">Admission No</th>
+                    <th className="p-3">Trainee Name</th>
+                    <th className="p-3">Programme</th>
+                    <th className="p-3">Examining Body</th>
+                    <th className="p-3">Current Term</th>
+                    <th className="p-3">Fee Status</th>
+                    <th className="p-3">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {students.map(stu => (
+                    <tr key={stu.id} className="hover:bg-slate-50">
+                      <td className="p-3 font-mono font-bold text-blue-900">{stu.admissionNumber}</td>
+                      <td className="p-3 font-bold text-slate-900">{stu.fullName}</td>
+                      <td className="p-3">{stu.programmeName}</td>
+                      <td className="p-3 font-semibold text-slate-600">{stu.examiningBody}</td>
+                      <td className="p-3">Term {stu.currentTerm} of {stu.totalTerms}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded font-bold text-[11px] ${
+                          (stu.feeBalance ?? 0) === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {(stu.feeBalance ?? 0) === 0 ? 'Cleared' : `KES ${(stu.feeBalance ?? 0).toLocaleString()}`}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => handlePrintStudentTranscript(stu)}
+                          className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Generate Official Transcript</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

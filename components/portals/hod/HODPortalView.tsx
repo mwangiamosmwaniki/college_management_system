@@ -27,11 +27,25 @@ import {
 import { DepartmentCurriculum, LecturerUnitAllocation } from '@/types/erp';
 
 export default function HODPortalView() {
-  const { institutionalSettings, openInstitutionalDocument, currentUser } = useERP();
+  const { institutionalSettings, openInstitutionalDocument, currentUser, activeNavTab, setActiveNavTab } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'CURRICULUM' | 'ALLOCATION' | 'MODERATION' | 'TIMETABLE'>('CURRICULUM');
+  const activeTab: 'CURRICULUM' | 'ALLOCATION' | 'MODERATION' | 'TIMETABLE' = 
+    activeNavTab === 'allocations' ? 'ALLOCATION' :
+    activeNavTab === 'moderation' ? 'MODERATION' :
+    activeNavTab === 'timetable' ? 'TIMETABLE' : 'CURRICULUM';
+
+  const setActiveTab = (tab: 'CURRICULUM' | 'ALLOCATION' | 'MODERATION' | 'TIMETABLE') => {
+    const tabMap: Record<string, string> = {
+      ALLOCATION: 'allocations',
+      MODERATION: 'moderation',
+      TIMETABLE: 'timetable',
+      CURRICULUM: 'curriculum'
+    };
+    setActiveNavTab(tabMap[tab] || 'curriculum');
+  };
   const [selectedCurriculum, setSelectedCurriculum] = useState<DepartmentCurriculum>(INITIAL_DEPARTMENT_CURRICULA[0]);
   const [allocations, setAllocations] = useState<LecturerUnitAllocation[]>(INITIAL_LECTURER_ALLOCATIONS);
+  const [moderationStatus, setModerationStatus] = useState<string | null>(null);
 
   // New allocation modal state
   const [isAllocateModalOpen, setIsAllocateModalOpen] = useState(false);
@@ -110,32 +124,32 @@ export default function HODPortalView() {
           {/* Tab Navigation */}
           <div className="flex items-center gap-1.5 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
             <button
-              onClick={() => setActiveTab('CURRICULUM')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              onClick={() => { setActiveTab('CURRICULUM'); setActiveNavTab('dashboard'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'CURRICULUM' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
               Curricula & Syllabus
             </button>
             <button
-              onClick={() => setActiveTab('ALLOCATION')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              onClick={() => { setActiveTab('ALLOCATION'); setActiveNavTab('allocations'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'ALLOCATION' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
               Lecturer Allocations
             </button>
             <button
-              onClick={() => setActiveTab('MODERATION')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              onClick={() => { setActiveTab('MODERATION'); setActiveNavTab('moderation'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'MODERATION' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
               Marks Moderation
             </button>
             <button
-              onClick={() => setActiveTab('TIMETABLE')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              onClick={() => { setActiveTab('TIMETABLE'); setActiveNavTab('timetable'); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'TIMETABLE' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -308,18 +322,30 @@ export default function HODPortalView() {
               </p>
             </div>
 
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-900">
-              <div className="flex items-center gap-2.5">
-                <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />
-                <span><strong>Pending Review:</strong> DICT 101 Computer Programming (34 Trainees Submitted by Dr. Marcus Henderson)</span>
+            {moderationStatus ? (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-900">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span><strong>Moderation Endorsed:</strong> {moderationStatus}</span>
+                </div>
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[11px]">
+                  Forwarded to Examinations Board
+                </span>
               </div>
-              <button
-                onClick={() => alert('Marks for DICT 101 successfully moderated and forwarded to Registrar / Examinations Board.')}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold transition-colors"
-              >
-                Approve & Endorse Moderation
-              </button>
-            </div>
+            ) : (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-900">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />
+                  <span><strong>Pending Review:</strong> DICT 101 Computer Programming (34 Trainees Submitted by Dr. Marcus Henderson)</span>
+                </div>
+                <button
+                  onClick={() => setModerationStatus('Marks for DICT 101 successfully moderated and forwarded to Registrar / Examinations Board.')}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold transition-colors cursor-pointer"
+                >
+                  Approve & Endorse Moderation
+                </button>
+              </div>
+            )}
           </div>
         )}
 

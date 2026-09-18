@@ -20,9 +20,22 @@ import {
 import { useERP } from '@/context/erp-context';
 
 export default function PrincipalExecutiveDashboardView() {
-  const { institutionalSettings, openInstitutionalDocument } = useERP();
+  const { institutionalSettings, openInstitutionalDocument, activeNavTab, setActiveNavTab } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'FINANCIALS' | 'ACADEMIC_KPIS' | 'GOVERNANCE'>('OVERVIEW');
+  const activeTab: 'OVERVIEW' | 'FINANCIALS' | 'ACADEMIC_KPIS' | 'GOVERNANCE' = 
+    activeNavTab === 'academics' ? 'ACADEMIC_KPIS' :
+    activeNavTab === 'financials' || activeNavTab === 'finance' ? 'FINANCIALS' :
+    activeNavTab === 'governance' || activeNavTab === 'reports' ? 'GOVERNANCE' : 'OVERVIEW';
+
+  const setActiveTab = (tab: 'OVERVIEW' | 'FINANCIALS' | 'ACADEMIC_KPIS' | 'GOVERNANCE') => {
+    const tabMap: Record<string, string> = {
+      ACADEMIC_KPIS: 'academics',
+      FINANCIALS: 'financials',
+      GOVERNANCE: 'governance',
+      OVERVIEW: 'dashboard'
+    };
+    setActiveNavTab(tabMap[tab] || 'dashboard');
+  };
 
   const handlePrintExecutiveReport = () => {
     openInstitutionalDocument({
@@ -68,18 +81,55 @@ export default function PrincipalExecutiveDashboardView() {
             </div>
           </div>
 
-          <button
-            onClick={handlePrintExecutiveReport}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            <span>Generate Executive Gazette PDF</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+              <button
+                onClick={() => { setActiveTab('OVERVIEW'); setActiveNavTab('dashboard'); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  activeTab === 'OVERVIEW' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                Executive Overview
+              </button>
+              <button
+                onClick={() => { setActiveTab('FINANCIALS'); setActiveNavTab('finance'); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  activeTab === 'FINANCIALS' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                Financial Intelligence
+              </button>
+              <button
+                onClick={() => { setActiveTab('ACADEMIC_KPIS'); setActiveNavTab('academics'); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  activeTab === 'ACADEMIC_KPIS' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                Academic & TVETA KPIs
+              </button>
+              <button
+                onClick={() => { setActiveTab('GOVERNANCE'); setActiveNavTab('reports'); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  activeTab === 'GOVERNANCE' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                Governance & Gazettes
+              </button>
+            </div>
+
+            <button
+              onClick={handlePrintExecutiveReport}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>Gazette PDF</span>
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
-        {/* KPI Cards */}
+        {/* KPI Cards (Always visible at glance) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
             <div className="flex items-center justify-between">
@@ -128,84 +178,151 @@ export default function PrincipalExecutiveDashboardView() {
           </div>
         </div>
 
-        {/* Strategic Breakdowns */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Department Performance */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="font-bold text-slate-900 text-lg">Departmental Enrollment & Revenue Performance</h3>
-            <div className="space-y-3 text-xs">
-              <div>
-                <div className="flex justify-between font-bold mb-1">
-                  <span>Computing & Applied Sciences (1,240 Trainees)</span>
-                  <span className="text-emerald-700">KES 18.6M</span>
+        {/* TAB 1: OVERVIEW & BREAKDOWNS */}
+        {activeTab === 'OVERVIEW' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Department Performance */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <h3 className="font-bold text-slate-900 text-lg">Departmental Enrollment & Revenue Performance</h3>
+              <div className="space-y-3 text-xs">
+                <div>
+                  <div className="flex justify-between font-bold mb-1">
+                    <span>Computing & Applied Sciences (1,240 Trainees)</span>
+                    <span className="text-emerald-700">KES 18.6M</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-600 h-full rounded-full w-[85%]"></div>
+                  </div>
                 </div>
-                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div className="bg-emerald-600 h-full rounded-full w-[85%]"></div>
+
+                <div>
+                  <div className="flex justify-between font-bold mb-1">
+                    <span>Electrical & Electronics Engineering (890 Trainees)</span>
+                    <span className="text-emerald-700">KES 14.2M</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-indigo-600 h-full rounded-full w-[70%]"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between font-bold mb-1">
+                    <span>Building & Civil Engineering (680 Trainees)</span>
+                    <span className="text-emerald-700">KES 9.8M</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-amber-600 h-full rounded-full w-[55%]"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between font-bold mb-1">
+                    <span>Business, Accounting & Management (610 Trainees)</span>
+                    <span className="text-emerald-700">KES 5.6M</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="bg-purple-600 h-full rounded-full w-[45%]"></div>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div>
-                <div className="flex justify-between font-bold mb-1">
-                  <span>Electrical & Electronics Engineering (890 Trainees)</span>
-                  <span className="text-emerald-700">KES 14.2M</span>
+            {/* Revenue Channels */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <h3 className="font-bold text-slate-900 text-lg">Revenue Inflow Channels (Term 1 2026)</h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
+                  <div className="text-emerald-800 font-semibold">Lipa na M-Pesa (Paybill 247247)</div>
+                  <div className="text-lg font-bold text-emerald-950">KES 26.4M</div>
+                  <div className="text-[11px] text-emerald-700">Direct real-time trainee settlements</div>
                 </div>
-                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div className="bg-indigo-600 h-full rounded-full w-[70%]"></div>
-                </div>
-              </div>
 
-              <div>
-                <div className="flex justify-between font-bold mb-1">
-                  <span>Building & Civil Engineering (680 Trainees)</span>
-                  <span className="text-emerald-700">KES 9.8M</span>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl space-y-1">
+                  <div className="text-blue-800 font-semibold">HELB & GoK Capitation</div>
+                  <div className="text-lg font-bold text-blue-950">KES 14.8M</div>
+                  <div className="text-[11px] text-blue-700">State Department for TVET</div>
                 </div>
-                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div className="bg-amber-600 h-full rounded-full w-[55%]"></div>
-                </div>
-              </div>
 
-              <div>
-                <div className="flex justify-between font-bold mb-1">
-                  <span>Business, Accounting & Management (610 Trainees)</span>
-                  <span className="text-emerald-700">KES 5.6M</span>
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                  <div className="text-amber-800 font-semibold">County Bursaries & CDF</div>
+                  <div className="text-lg font-bold text-amber-950">KES 4.2M</div>
+                  <div className="text-[11px] text-amber-700">Disbursed by NG-CDF & Counties</div>
                 </div>
-                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div className="bg-purple-600 h-full rounded-full w-[45%]"></div>
+
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-1">
+                  <div className="text-purple-800 font-semibold">Direct Bank Transfers</div>
+                  <div className="text-lg font-bold text-purple-950">KES 2.8M</div>
+                  <div className="text-[11px] text-purple-700">Corporate & sponsor EFTs</div>
                 </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Revenue Channels */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="font-bold text-slate-900 text-lg">Revenue Inflow Channels (Term 1 2026)</h3>
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
-                <div className="text-emerald-800 font-semibold">Lipa na M-Pesa (Paybill 247247)</div>
-                <div className="text-lg font-bold text-emerald-950">KES 26.4M</div>
-                <div className="text-[11px] text-emerald-700">Direct real-time trainee settlements</div>
+        {/* TAB 2: FINANCIAL INTELLIGENCE */}
+        {activeTab === 'FINANCIALS' && (
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+            <h3 className="text-lg font-bold text-slate-900">Institutional Financial Position & Operating Cash Flow</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1">
+                <span className="font-semibold text-emerald-800">Total Billed Tuition & Amenities</span>
+                <div className="text-2xl font-bold text-emerald-950">KES 52,000,000</div>
+                <p className="text-emerald-700">Annual projected tuition revenue</p>
               </div>
-
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl space-y-1">
-                <div className="text-blue-800 font-semibold">HELB & GoK Capitation</div>
-                <div className="text-lg font-bold text-blue-950">KES 14.8M</div>
-                <div className="text-[11px] text-blue-700">State Department for TVET</div>
+              <div className="p-5 bg-blue-50 border border-blue-200 rounded-xl space-y-1">
+                <span className="font-semibold text-blue-800">Net Collections Realized</span>
+                <div className="text-2xl font-bold text-blue-950">KES 48,250,000</div>
+                <p className="text-blue-700">92.8% collection efficiency rate</p>
               </div>
-
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
-                <div className="text-amber-800 font-semibold">County Bursaries & CDF</div>
-                <div className="text-lg font-bold text-amber-950">KES 4.2M</div>
-                <div className="text-[11px] text-amber-700">Disbursed by NG-CDF & Counties</div>
-              </div>
-
-              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-1">
-                <div className="text-purple-800 font-semibold">Direct Bank Transfers</div>
-                <div className="text-lg font-bold text-purple-950">KES 2.8M</div>
-                <div className="text-[11px] text-purple-700">Corporate & sponsor EFTs</div>
+              <div className="p-5 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
+                <span className="font-semibold text-amber-800">Outstanding Trainee Fee Balances</span>
+                <div className="text-2xl font-bold text-amber-950">KES 3,750,000</div>
+                <p className="text-amber-700">Under structured fee-recovery plans</p>
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* TAB 3: ACADEMIC & TVETA KPIS */}
+        {activeTab === 'ACADEMIC_KPIS' && (
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+            <h3 className="text-lg font-bold text-slate-900">Academic Quality & TVETA Compliance Standards</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="font-bold text-slate-900 text-sm">KNEC / CDACC Accreditation & Pass Series</div>
+                <p className="text-slate-600">All 14 diploma and certificate programs are fully approved and compliant with TVETA Kenya standards.</p>
+                <div className="font-semibold text-emerald-700">Pass Rate: 94.8% • Drop-out Rate: &lt; 1.2%</div>
+              </div>
+              <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="font-bold text-slate-900 text-sm">Industrial Liaison & Attachment Placements</div>
+                <p className="text-slate-600">100% of eligible trainees placed with leading Kenyan engineering firms, county offices, and tech enterprises.</p>
+                <div className="font-semibold text-teal-700">410 Active Placements • 100% Placement Record</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: GOVERNANCE & GAZETTES */}
+        {activeTab === 'GOVERNANCE' && (
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Board of Governors Reports & Statutory Gazettes</h3>
+                <p className="text-xs text-slate-500">Official certified executive summaries prepared for council and Ministry of Education oversight.</p>
+              </div>
+              <button
+                onClick={handlePrintExecutiveReport}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-sm cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export Council Gazette</span>
+              </button>
+            </div>
+            <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-900 space-y-1">
+              <strong>Institutional Gazette 2026/2027:</strong> All institutional audits, staffing records, and TVET capitation allocations are certified for presentation to the Board of Governors.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
