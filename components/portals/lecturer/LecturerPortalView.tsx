@@ -66,7 +66,6 @@ export function LecturerPortalView() {
     activeNavTab,
     setActiveNavTab,
     logAction,
-    navigateToPortal,
     publishCrossPortalEvent
   } = useERP();
 

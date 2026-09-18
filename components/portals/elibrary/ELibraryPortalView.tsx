@@ -6,7 +6,6 @@ import { PortalDataLifecycleManager } from '@/components/common/PortalDataLifecy
 import {
   Library,
   BookOpenCheck,
-  GraduationCap,
   Clock,
   Download,
   Eye,
@@ -33,8 +32,7 @@ export function ELibraryPortalView() {
     borrowBook,
     returnBook,
     reserveBook,
-    accessDigitalResource,
-    navigateToPortal
+    accessDigitalResource
   } = useERP();
 
   const assignment = currentUser.portalAssignments.find(a => a.portalId === 'ELIBRARY');
@@ -86,25 +84,9 @@ export function ELibraryPortalView() {
               <h1 className="text-2xl font-black text-white tracking-tight">
                 E-Library & Digital Resource Repository
               </h1>
-            </div>
-
-            {/* Cross-Portal Bridges */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => navigateToPortal('STUDENT')}
-                className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition"
-              >
-                <GraduationCap className="w-4 h-4 text-white" />
-                <span>Return to Student Portal</span>
-              </button>
-
-              <button
-                onClick={() => navigateToPortal('ELEARNING')}
-                className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition"
-              >
-                <BookOpenCheck className="w-4 h-4 text-white" />
-                <span>Open E-Learning LMS</span>
-              </button>
+              <p className="text-xs text-amber-300/80">
+                Institutional Academic Repository, Digital Journals, Textbooks & DRM
+              </p>
             </div>
           </div>
 

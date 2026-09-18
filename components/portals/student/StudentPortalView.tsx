@@ -49,6 +49,9 @@ export function StudentPortalView() {
     openInstitutionalDocument
   } = useERP();
 
+  const canAccessELearning = currentUser.portalAssignments.some(a => a.portalId === 'ELEARNING');
+  const canAccessELibrary = currentUser.portalAssignments.some(a => a.portalId === 'ELIBRARY');
+
   // State for submitting a new student request
   const [reqType, setReqType] = useState<StudentRequest['type']>('OFFICIAL_TRANSCRIPT');
   const [reqSubject, setReqSubject] = useState('');
@@ -414,6 +417,35 @@ export function StudentPortalView() {
                 <span className="text-[11px] text-slate-500 block mt-1">Transcripts & attestations</span>
               </button>
             </div>
+
+            {/* Authorized Student Resources (Student Exception) */}
+            {(canAccessELearning || canAccessELibrary) && (
+              <div className="pt-2.5 mt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="text-[11px] text-slate-400 font-medium">Authorized Learning Portals:</span>
+                <div className="flex items-center gap-2">
+                  {canAccessELearning && (
+                    <button
+                      id="student-access-elearning"
+                      onClick={() => navigateToPortal('ELEARNING')}
+                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-emerald-400 border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <BookOpenCheck className="w-3.5 h-3.5" />
+                      <span>E-Learning LMS</span>
+                    </button>
+                  )}
+                  {canAccessELibrary && (
+                    <button
+                      id="student-access-elibrary"
+                      onClick={() => navigateToPortal('ELIBRARY')}
+                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-medium text-amber-400 border border-slate-700 transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Library className="w-3.5 h-3.5" />
+                      <span>E-Library Catalog</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Enrolled Courses / Schedule */}

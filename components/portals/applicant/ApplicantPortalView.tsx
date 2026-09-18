@@ -28,7 +28,7 @@ import { ApplicantMasterRecord, KenyanQualificationLevel } from '@/types/erp';
 import { KENYAN_PUBLIC_PROGRAMMES, INITIAL_APPLICANTS_DATA } from '@/lib/kenyan-tvet-data';
 
 export default function ApplicantPortalView() {
-  const { institutionalSettings, openInstitutionalDocument, navigateToPortal, activeNavTab, setActiveNavTab } = useERP();
+  const { institutionalSettings, openInstitutionalDocument, activeNavTab, setActiveNavTab } = useERP();
 
   const activeTab: 'NEW_APPLICATION' | 'TRACK_STATUS' = 
     activeNavTab === 'status' || activeNavTab === 'track' ? 'TRACK_STATUS' : 'NEW_APPLICATION';

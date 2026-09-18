@@ -5,8 +5,6 @@ import { useERP } from '@/context/erp-context';
 import { PortalDataLifecycleManager } from '@/components/common/PortalDataLifecycleManager';
 import {
   BookOpenCheck,
-  GraduationCap,
-  Library,
   FileCheck2,
   HelpCircle,
   Award,
@@ -33,8 +31,7 @@ export function ELearningPortalView() {
     setActiveLmsCourseId,
     submitAssignment,
     gradeSubmission,
-    submitQuizAttempt,
-    navigateToPortal
+    submitQuizAttempt
   } = useERP();
 
   // Active course
@@ -157,25 +154,9 @@ export function ELearningPortalView() {
               <h1 className="text-2xl font-black text-white tracking-tight">
                 Curriculum & Assessment Hub
               </h1>
-            </div>
-
-            {/* Cross-portal bridges */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => navigateToPortal('STUDENT')}
-                className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition group"
-              >
-                <GraduationCap className="w-4 h-4 text-white" />
-                <span>Return to Student Portal</span>
-              </button>
-
-              <button
-                onClick={() => navigateToPortal('ELIBRARY')}
-                className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition group"
-              >
-                <Library className="w-4 h-4 text-white" />
-                <span>Search E-Library Resources</span>
-              </button>
+              <p className="text-xs text-emerald-300/80">
+                Institutional Courseware, CBT Assessments & Learning Resources
+              </p>
             </div>
           </div>
 

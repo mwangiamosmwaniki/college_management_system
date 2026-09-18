@@ -2,28 +2,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useERP } from '@/context/erp-context';
-import { PortalId } from '@/types/erp';
 import {
-  GraduationCap,
-  BookOpenCheck,
-  Library,
-  Receipt,
-  FileSpreadsheet,
-  Users,
-  Building2,
-  ShieldAlert,
-  UserCheck,
-  Layers,
   Bell,
   ChevronDown,
   LogOut,
   LogIn,
   User,
-  Settings,
   HelpCircle,
-  Menu,
-  CheckCircle,
-  ExternalLink
+  Menu
 } from 'lucide-react';
 
 export function CentralHeader() {
@@ -31,7 +17,6 @@ export function CentralHeader() {
     currentUser,
     activePortalId,
     portals,
-    navigateToPortal,
     notifications,
     institutionalSettings,
     toggleMobileSidebar,
@@ -40,13 +25,11 @@ export function CentralHeader() {
     setActiveNavTab
   } = useERP();
 
-  const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   const notifRef = useRef<HTMLDivElement>(null);
-  const workspaceRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns on outside click
@@ -54,9 +37,6 @@ export function CentralHeader() {
     function handleClickOutside(event: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setIsNotifOpen(false);
-      }
-      if (workspaceRef.current && !workspaceRef.current.contains(event.target as Node)) {
-        setIsWorkspaceMenuOpen(false);
       }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
@@ -68,11 +48,6 @@ export function CentralHeader() {
 
   const activePortal = portals.find(p => p.id === activePortalId) || portals[0];
 
-  // Strictly filter portals assigned to THIS authenticated user
-  const assignedPortals = portals.filter(portal =>
-    currentUser.portalAssignments.some(a => a.portalId === portal.id)
-  );
-
   // Filter notifications relevant to THIS user
   const userNotifications = notifications.filter(n => {
     if (n.targetUserId === currentUser.id || n.targetUserId === currentUser.identifier) return true;
@@ -80,21 +55,6 @@ export function CentralHeader() {
     return currentUser.portalAssignments.some(a => a.portalId === n.sourcePortal);
   });
   const unreadCount = userNotifications.filter(n => !n.read).length;
-
-  const getPortalIcon = (id: PortalId) => {
-    switch (id) {
-      case 'STUDENT': return <GraduationCap className="w-4 h-4 text-blue-500" />;
-      case 'ELEARNING': return <BookOpenCheck className="w-4 h-4 text-emerald-500" />;
-      case 'ELIBRARY': return <Library className="w-4 h-4 text-amber-500" />;
-      case 'FINANCE': return <Receipt className="w-4 h-4 text-purple-500" />;
-      case 'EXAMINATIONS': return <FileSpreadsheet className="w-4 h-4 text-rose-500" />;
-      case 'HR': return <Users className="w-4 h-4 text-indigo-500" />;
-      case 'ADMISSIONS': return <UserCheck className="w-4 h-4 text-teal-500" />;
-      case 'HOSTEL': return <Building2 className="w-4 h-4 text-cyan-500" />;
-      case 'ADMIN': return <ShieldAlert className="w-4 h-4 text-slate-700" />;
-      default: return <Layers className="w-4 h-4 text-slate-500" />;
-    }
-  };
 
   const getContextSubtitle = () => {
     if (activePortalId === 'STUDENT') {
@@ -161,7 +121,7 @@ export function CentralHeader() {
             </div>
           </div>
 
-          {/* Center: Contextual Workspace & Portal Indicator */}
+          {/* Center: Contextual Informational Indicator (strictly informational, no portal switcher) */}
           <div className="hidden md:flex items-center justify-center">
             <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100/90 border border-slate-200 text-xs">
               <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
@@ -171,63 +131,8 @@ export function CentralHeader() {
             </div>
           </div>
 
-          {/* Right: Workspaces (if multiple) + Help + Notifications + Profile */}
+          {/* Right: Notifications + Help + Profile */}
           <div className="flex items-center gap-2">
-
-            {/* Authorized Portals Switcher (only shown if user has more than 1 assigned portal) */}
-            {assignedPortals.length > 1 && (
-              <div className="relative" ref={workspaceRef}>
-                <button
-                  id="btn-my-workspaces"
-                  onClick={() => setIsWorkspaceMenuOpen(!isWorkspaceMenuOpen)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 hover:text-slate-900 transition cursor-pointer"
-                  title="Switch to another authorized portal"
-                >
-                  <Layers className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="hidden sm:inline">Portals</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-                </button>
-
-                {isWorkspaceMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 rounded-xl bg-white border border-slate-200 shadow-xl p-2 z-50">
-                    <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100">
-                      Authorized Portals
-                    </div>
-                    <div className="max-h-72 overflow-y-auto py-1 space-y-1">
-                      {assignedPortals.map(portal => {
-                        const isCurrent = portal.id === activePortalId;
-                        return (
-                          <button
-                            key={portal.id}
-                            id={`switch-workspace-${portal.id.toLowerCase()}`}
-                            onClick={() => {
-                              navigateToPortal(portal.id);
-                              setIsWorkspaceMenuOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-2.5 transition text-xs cursor-pointer ${
-                              isCurrent
-                                ? 'bg-blue-50 text-blue-800 font-semibold border border-blue-100'
-                                : 'hover:bg-slate-50 text-slate-700'
-                            }`}
-                          >
-                            <div className="p-1 rounded-md bg-white border border-slate-200 shrink-0">
-                              {getPortalIcon(portal.id)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="truncate block font-medium">{portal.name}</span>
-                              <span className="text-[11px] text-slate-400 block truncate">
-                                {portal.ownerDepartment || 'Workspace'}
-                              </span>
-                            </div>
-                            {isCurrent && <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Notifications Bell */}
             <div className="relative" ref={notifRef}>
@@ -282,17 +187,6 @@ export function CentralHeader() {
                           <p className="text-xs text-slate-600 leading-relaxed">{n.message}</p>
                           <div className="mt-2 text-[11px] text-slate-400 flex justify-between items-center">
                             <span>{n.timestamp}</span>
-                            {n.actionLink && (
-                              <button
-                                onClick={() => {
-                                  navigateToPortal(n.sourcePortal);
-                                  setIsNotifOpen(false);
-                                }}
-                                className="text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
-                              >
-                                View in {n.sourcePortal} →
-                              </button>
-                            )}
                           </div>
                         </div>
                       ))
@@ -377,17 +271,6 @@ export function CentralHeader() {
                       >
                         <HelpCircle className="w-4 h-4 text-slate-500" />
                         <span>Help & Support</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          navigateToPortal('PUBLIC');
-                          setIsUserMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-slate-700 hover:bg-slate-50 transition cursor-pointer"
-                      >
-                        <ExternalLink className="w-4 h-4 text-blue-600" />
-                        <span>Institutional Public Site</span>
                       </button>
                     </div>
 
